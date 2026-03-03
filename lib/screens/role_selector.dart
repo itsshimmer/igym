@@ -1,5 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'login_aluno.dart';
+import 'login_professor.dart';
 
 class RoleSelectorScreen extends StatelessWidget {
   const RoleSelectorScreen({super.key});
@@ -82,6 +84,11 @@ class RoleSelectorScreen extends StatelessWidget {
                 chevronColor: const Color(0xFF8C52FF),
                 onTap: () {
                   // TODO: Navegar para a rota do Professor
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const LoginProfessorScreen()),
+                  );
                 },
               ),
               const SizedBox(height: 16),
@@ -99,6 +106,12 @@ class RoleSelectorScreen extends StatelessWidget {
                 isIconRotated: true,
                 onTap: () {
                   // TODO: Navegar para a rota do Aluno
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const LoginAlunoScreen()),
+                    );
+
                 },
               ),
 
