@@ -515,7 +515,7 @@ class _PrescribeWorkoutScreenState extends State<PrescribeWorkoutScreen> {
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          value: value,
+          initialValue: value,
           dropdownColor: const Color(0xFF1E1433),
           icon: Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey.shade400),
           style: const TextStyle(color: Colors.white, fontSize: 14),
