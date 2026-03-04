@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "464502883248",
+    "project_id": "igym-e0793",
+    "storage_bucket": "igym-e0793.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:464502883248:android:40ef32d87d8b5d7e960c75",
+        "android_client_info": {
+          "package_name": "com.joaobrentano.igym.igym"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDY4_6J2FqJYWCfChEnxJsxHZZbday1VZE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
