@@ -1,14 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:igym/providers/auth_provider.dart';
+import 'package:igym/providers/workout_provider.dart';
 import 'package:igym/screens/role_selector.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'package:provider/provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(const IGymApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => WorkoutProvider()),
+      ],
+      child: const IGymApp(),
+    ),
+  );
 }
 
 class IGymApp extends StatelessWidget {

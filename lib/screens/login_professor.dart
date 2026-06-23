@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:igym/screens/teacher_dashboard.dart';
+import 'package:provider/provider.dart';
+
+import '../providers/auth_provider.dart';
 
 class LoginProfessorScreen extends StatelessWidget {
   const LoginProfessorScreen({super.key});
@@ -145,8 +148,24 @@ class LoginProfessorScreen extends StatelessWidget {
 
               // Botão Entrar
               ElevatedButton(
-                onPressed: () {
-                  // TODO: Lógica de Login do Professor
+                onPressed: () async {
+                  final authProvider = context.read<AuthProvider>();
+
+                  // Forçando o login de teste temporariamente para validar o fluxo
+                  bool logado = await authProvider.login('professor@igym.com', '123456');
+
+                  if (logado) {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const TeacherDashboardScreen(),
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Erro ao autenticar no Firebase.')),
+                    );
+                  }
 
                   Navigator.pushReplacement(
                     context,

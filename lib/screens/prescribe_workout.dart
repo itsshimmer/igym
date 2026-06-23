@@ -283,7 +283,7 @@ class _PrescribeWorkoutScreenState extends State<PrescribeWorkoutScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE55353).withOpacity(0.15),
+                  color: const Color(0xFFE55353).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(Icons.delete_outline_rounded, color: Color(0xFFE55353), size: 20),
