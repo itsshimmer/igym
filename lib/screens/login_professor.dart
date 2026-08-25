@@ -4,11 +4,28 @@ import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
 
-class LoginProfessorScreen extends StatelessWidget {
+class LoginProfessorScreen extends StatefulWidget {
   const LoginProfessorScreen({super.key});
 
   @override
+  State<LoginProfessorScreen> createState() => _LoginProfessorScreenState();
+}
+
+class _LoginProfessorScreenState extends State<LoginProfessorScreen> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+
     return Scaffold(
       backgroundColor: const Color(0xFF0F0E13),
       body: SafeArea(
@@ -116,19 +133,21 @@ class LoginProfessorScreen extends StatelessWidget {
               const SizedBox(height: 24),
 
               // Campo E-mail
-              const CustomInputField(
+              CustomInputField(
                 label: 'E-mail',
                 hintText: 'seu@email.com',
                 prefixIcon: Icons.email_outlined,
+                controller: _emailController,
               ),
               const SizedBox(height: 20),
 
               // Campo Senha
-              const CustomInputField(
+              CustomInputField(
                 label: 'Senha',
                 hintText: '••••••••',
                 prefixIcon: Icons.lock_outline,
                 isPassword: true,
+                controller: _passwordController,
               ),
               const SizedBox(height: 12),
 
@@ -148,32 +167,39 @@ class LoginProfessorScreen extends StatelessWidget {
 
               // Botão Entrar
               ElevatedButton(
-                onPressed: () async {
-                  final authProvider = context.read<AuthProvider>();
+                onPressed: authProvider.isLoading
+                    ? null
+                    : () async {
+                        final email = _emailController.text.trim();
+                        final password = _passwordController.text.trim();
 
-                  // Forçando o login de teste temporariamente para validar o fluxo
-                  bool logado = await authProvider.login('professor@igym.com', '123456');
+                        if (email.isEmpty || password.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Preencha todos os campos.')),
+                          );
+                          return;
+                        }
 
-                  if (logado) {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const TeacherDashboardScreen(),
-                      ),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Erro ao autenticar no Firebase.')),
-                    );
-                  }
+                        bool logado = await authProvider.login(email, password);
 
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const TeacherDashboardScreen(),
-                    ),
-                  );
-                },
+                        if (logado) {
+                          if (mounted) {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const TeacherDashboardScreen(),
+                              ),
+                            );
+                          }
+                        } else {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Erro ao autenticar. Verifique suas credenciais.')),
+                            );
+                          }
+                        }
+                      },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF8C52FF),
                   foregroundColor: Colors.white,
@@ -183,13 +209,22 @@ class LoginProfessorScreen extends StatelessWidget {
                   ),
                   elevation: 0,
                 ),
-                child: const Text(
-                  'Entrar',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                child: authProvider.isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        'Entrar',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
               const SizedBox(height: 24),
 
@@ -272,14 +307,12 @@ class LoginProfessorScreen extends StatelessWidget {
   }
 }
 
-/// Como o CustomInputField é o mesmo da tela do Aluno,
-/// em um projeto real você pode mover essa classe para um arquivo
-/// separado (ex: widgets/custom_input_field.dart) e importar nas duas telas!
-class CustomInputField extends StatelessWidget {
+class CustomInputField extends StatefulWidget {
   final String label;
   final String hintText;
   final IconData prefixIcon;
   final bool isPassword;
+  final TextEditingController? controller;
 
   const CustomInputField({
     super.key,
@@ -287,7 +320,21 @@ class CustomInputField extends StatelessWidget {
     required this.hintText,
     required this.prefixIcon,
     this.isPassword = false,
+    this.controller,
   });
+
+  @override
+  State<CustomInputField> createState() => _CustomInputFieldState();
+}
+
+class _CustomInputFieldState extends State<CustomInputField> {
+  bool _obscureText = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _obscureText = widget.isPassword;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -295,7 +342,7 @@ class CustomInputField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label,
+          widget.label,
           style: TextStyle(
             color: Colors.grey.shade300,
             fontSize: 14,
@@ -304,14 +351,25 @@ class CustomInputField extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         TextField(
-          obscureText: isPassword,
+          controller: widget.controller,
+          obscureText: _obscureText,
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
-            hintText: hintText,
+            hintText: widget.hintText,
             hintStyle: TextStyle(color: Colors.grey.shade600),
-            prefixIcon: Icon(prefixIcon, color: Colors.grey.shade500),
-            suffixIcon: isPassword
-                ? Icon(Icons.visibility_off_outlined, color: Colors.grey.shade500)
+            prefixIcon: Icon(widget.prefixIcon, color: Colors.grey.shade500),
+            suffixIcon: widget.isPassword
+                ? IconButton(
+                    icon: Icon(
+                      _obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      color: Colors.grey.shade500,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscureText = !_obscureText;
+                      });
+                    },
+                  )
                 : null,
             filled: true,
             fillColor: const Color(0xFF16161A),
