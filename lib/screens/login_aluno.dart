@@ -1,12 +1,34 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:igym/screens/register_aluno.dart';
 import 'package:igym/screens/select_teacher.dart';
+import 'package:igym/screens/student_content.dart';
+import 'package:provider/provider.dart';
 
-class LoginAlunoScreen extends StatelessWidget {
+import '../providers/auth_provider.dart';
+
+class LoginAlunoScreen extends StatefulWidget {
   const LoginAlunoScreen({super.key});
 
   @override
+  State<LoginAlunoScreen> createState() => _LoginAlunoScreenState();
+}
+
+class _LoginAlunoScreenState extends State<LoginAlunoScreen> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+
     return Scaffold(
       backgroundColor: const Color(0xFF0F0E13),
       body: SafeArea(
@@ -15,7 +37,6 @@ class LoginAlunoScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Botão Voltar
               Align(
                 alignment: Alignment.centerLeft,
                 child: GestureDetector(
@@ -38,8 +59,6 @@ class LoginAlunoScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 40),
-
-              // Logo
               Center(
                 child: Container(
                   width: 72,
@@ -61,8 +80,6 @@ class LoginAlunoScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-
-              // Título e Subtítulo
               const Center(
                 child: Text(
                   'Entrar como Aluno',
@@ -84,8 +101,6 @@ class LoginAlunoScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 32),
-
-              // Indicador "Acesso de Aluno"
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
@@ -115,25 +130,21 @@ class LoginAlunoScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-
-              // Campo E-mail
-              const CustomInputField(
+              CustomInputField(
                 label: 'E-mail',
                 hintText: 'seu@email.com',
                 prefixIcon: Icons.email_outlined,
+                controller: _emailController,
               ),
               const SizedBox(height: 20),
-
-              // Campo Senha
-              const CustomInputField(
+              CustomInputField(
                 label: 'Senha',
                 hintText: '••••••••',
                 prefixIcon: Icons.lock_outline,
                 isPassword: true,
+                controller: _passwordController,
               ),
               const SizedBox(height: 12),
-
-              // Esqueceu a senha
               Align(
                 alignment: Alignment.centerRight,
                 child: Text(
@@ -146,19 +157,57 @@ class LoginAlunoScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 32),
-
-              // Botão Entrar
-              // Botão Entrar
               ElevatedButton(
-                onPressed: () {
-                  // Substitui a tela atual (Login) pela tela de Seleção de Professor
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SelectTeacherScreen(),
-                    ),
-                  );
-                },
+                onPressed: authProvider.isLoading
+                    ? null
+                    : () async {
+                        final email = _emailController.text.trim();
+                        final password = _passwordController.text.trim();
+
+                        if (email.isEmpty || password.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Preencha todos os campos.')),
+                          );
+                          return;
+                        }
+
+                        bool logado = await authProvider.login(email, password);
+
+                        if (logado) {
+                          if (mounted) {
+                            if (authProvider.userRole != 'aluno') {
+                              await authProvider.logout();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Esta conta não é de aluno.')),
+                              );
+                              return;
+                            }
+
+                            if (authProvider.teacherId != null) {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const StudentContentScreen(),
+                                ),
+                              );
+                            } else {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const SelectTeacherScreen(),
+                                ),
+                              );
+                            }
+                          }
+                        } else {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Erro ao autenticar. Verifique suas credenciais.')),
+                            );
+                          }
+                        }
+                      },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF8C52FF),
                   foregroundColor: Colors.white,
@@ -168,17 +217,24 @@ class LoginAlunoScreen extends StatelessWidget {
                   ),
                   elevation: 0,
                 ),
-                child: const Text(
-                  'Entrar',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                child: authProvider.isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        'Entrar',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
               const SizedBox(height: 24),
-
-              // Divisor "ou"
               Row(
                 children: [
                   Expanded(child: Divider(color: Colors.grey.shade800)),
@@ -193,12 +249,8 @@ class LoginAlunoScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 24),
-
-              // Botão Entrar com Google
               OutlinedButton(
-                onPressed: () {
-                  // TODO: Lógica de Login com Google
-                },
+                onPressed: () {},
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   side: const BorderSide(color: Color(0xFF28282D)),
@@ -210,7 +262,6 @@ class LoginAlunoScreen extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Substitua pelo asset do Google se tiver (ex: Image.asset('assets/google_logo.png', height: 24))
                     const Icon(Icons.g_mobiledata, color: Colors.white, size: 28),
                     const SizedBox(width: 8),
                     const Text(
@@ -225,8 +276,6 @@ class LoginAlunoScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 32),
-
-              // Footer "Não tem conta?"
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -236,7 +285,10 @@ class LoginAlunoScreen extends StatelessWidget {
                   ),
                   GestureDetector(
                     onTap: () {
-                      // TODO: Navegar para cadastro
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const RegisterAlunoScreen()),
+                      );
                     },
                     child: const Text(
                       'Cadastre-se',
@@ -258,12 +310,12 @@ class LoginAlunoScreen extends StatelessWidget {
   }
 }
 
-/// Widget customizado para os inputs do formulário
-class CustomInputField extends StatelessWidget {
+class CustomInputField extends StatefulWidget {
   final String label;
   final String hintText;
   final IconData prefixIcon;
   final bool isPassword;
+  final TextEditingController? controller;
 
   const CustomInputField({
     super.key,
@@ -271,7 +323,21 @@ class CustomInputField extends StatelessWidget {
     required this.hintText,
     required this.prefixIcon,
     this.isPassword = false,
+    this.controller,
   });
+
+  @override
+  State<CustomInputField> createState() => _CustomInputFieldState();
+}
+
+class _CustomInputFieldState extends State<CustomInputField> {
+  bool _obscureText = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _obscureText = widget.isPassword;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -279,7 +345,7 @@ class CustomInputField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label,
+          widget.label,
           style: TextStyle(
             color: Colors.grey.shade300,
             fontSize: 14,
@@ -288,14 +354,25 @@ class CustomInputField extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         TextField(
-          obscureText: isPassword,
+          controller: widget.controller,
+          obscureText: _obscureText,
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
-            hintText: hintText,
+            hintText: widget.hintText,
             hintStyle: TextStyle(color: Colors.grey.shade600),
-            prefixIcon: Icon(prefixIcon, color: Colors.grey.shade500),
-            suffixIcon: isPassword
-                ? Icon(Icons.visibility_off_outlined, color: Colors.grey.shade500)
+            prefixIcon: Icon(widget.prefixIcon, color: Colors.grey.shade500),
+            suffixIcon: widget.isPassword
+                ? IconButton(
+                    icon: Icon(
+                      _obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      color: Colors.grey.shade500,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscureText = !_obscureText;
+                      });
+                    },
+                  )
                 : null,
             filled: true,
             fillColor: const Color(0xFF16161A),

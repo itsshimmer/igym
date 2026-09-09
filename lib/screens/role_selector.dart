@@ -1,15 +1,49 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:igym/providers/auth_provider.dart';
+import 'package:igym/screens/student_content.dart';
+import 'package:igym/screens/teacher_dashboard.dart';
+import 'package:provider/provider.dart';
 import 'login_aluno.dart';
 import 'login_professor.dart';
 
-class RoleSelectorScreen extends StatelessWidget {
+class RoleSelectorScreen extends StatefulWidget {
   const RoleSelectorScreen({super.key});
+
+  @override
+  State<RoleSelectorScreen> createState() => _RoleSelectorScreenState();
+}
+
+class _RoleSelectorScreenState extends State<RoleSelectorScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _checkAuth();
+  }
+
+  void _checkAuth() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = context.read<AuthProvider>();
+      if (auth.user != null && auth.userRole != null) {
+        if (auth.userRole == 'professor') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const TeacherDashboardScreen()),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const StudentContentScreen()),
+          );
+        }
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0E13), // Fundo escuro da tela
+      backgroundColor: const Color(0xFF0F0E13),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -23,12 +57,12 @@ class RoleSelectorScreen extends StatelessWidget {
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF8C52FF), // Roxo do logo
+                  color: const Color(0xFF8C52FF),
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: Center(
                   child: Transform.rotate(
-                    angle: -pi / 4, // Rotacionando o halter em 45 graus
+                    angle: -pi / 4,
                     child: const Icon(
                       Icons.fitness_center_rounded,
                       color: Colors.white,
@@ -56,7 +90,7 @@ class RoleSelectorScreen extends StatelessWidget {
                 'Sua academia na palma da mão',
                 style: TextStyle(
                   fontSize: 16,
-                  color: Color(0xFFBDBDBD), // Equivalente a Colors.grey.shade400
+                  color: const Color(0xFFBDBDBD),
                 ),
               ),
 
@@ -83,8 +117,6 @@ class RoleSelectorScreen extends StatelessWidget {
                 borderColor: const Color(0xFF3A2460),
                 chevronColor: const Color(0xFF8C52FF),
                 onTap: () {
-                  // TODO: Navegar para a rota do Professor
-
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => const LoginProfessorScreen()),
@@ -105,13 +137,10 @@ class RoleSelectorScreen extends StatelessWidget {
                 chevronColor: const Color(0xFF9E9E9E),
                 isIconRotated: true,
                 onTap: () {
-                  // TODO: Navegar para a rota do Aluno
-
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const LoginAlunoScreen()),
-                    );
-
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const LoginAlunoScreen()),
+                  );
                 },
               ),
 
@@ -136,7 +165,6 @@ class RoleSelectorScreen extends StatelessWidget {
   }
 }
 
-/// Widget customizado para os botões de seleção de perfil
 class RoleCard extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -167,7 +195,6 @@ class RoleCard extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget iconWidget = Icon(icon, color: iconColor, size: 28);
 
-    // Rotaciona o ícone se for o halter
     if (isIconRotated) {
       iconWidget = Transform.rotate(
         angle: -pi / 4,
@@ -189,7 +216,6 @@ class RoleCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Ícone do Card
             Container(
               width: 56,
               height: 56,
@@ -200,8 +226,6 @@ class RoleCard extends StatelessWidget {
               child: Center(child: iconWidget),
             ),
             const SizedBox(width: 16),
-
-            // Textos
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -225,8 +249,6 @@ class RoleCard extends StatelessWidget {
                 ],
               ),
             ),
-
-            // Seta (Chevron)
             Icon(
               Icons.chevron_right_rounded,
               color: chevronColor,

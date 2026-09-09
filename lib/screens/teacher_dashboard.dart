@@ -1,7 +1,10 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:igym/providers/auth_provider.dart';
+import 'package:igym/providers/workout_provider.dart';
 import 'package:igym/screens/prescribe_workout.dart';
 import 'package:igym/screens/settings.dart';
+import 'package:provider/provider.dart';
 
 class TeacherDashboardScreen extends StatefulWidget {
   const TeacherDashboardScreen({super.key});
@@ -11,292 +14,363 @@ class TeacherDashboardScreen extends StatefulWidget {
 }
 
 class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
-  int _selectedIndex = 0; // "Início" é a aba selecionada por padrão
+  int _selectedIndex = 0;
+  List<Map<String, dynamic>> _students = [];
+  bool _isLoadingStudents = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  void _loadData() {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final auth = context.read<AuthProvider>();
+      if (auth.user != null) {
+        context.read<WorkoutProvider>().fetchWorkoutsForTeacher(auth.user!.uid);
+        final students = await auth.fetchStudentsForTeacher(auth.user!.uid);
+        if (mounted) {
+          setState(() {
+            _students = students;
+            _isLoadingStudents = false;
+          });
+        }
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final workoutProvider = context.watch<WorkoutProvider>();
+    final userName = auth.userName ?? 'Professor';
+    final workouts = workoutProvider.teacherWorkouts;
+
     return Scaffold(
       backgroundColor: const Color(0xFF0F0E13),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header (Saudação e Avatar)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Olá, Professor 👋',
-                        style: TextStyle(color: Colors.grey.shade400, fontSize: 15),
+        child: RefreshIndicator(
+          onRefresh: () async {
+            if (auth.user != null) {
+              await workoutProvider.fetchWorkoutsForTeacher(auth.user!.uid);
+              final students = await auth.fetchStudentsForTeacher(auth.user!.uid);
+              if (mounted) {
+                setState(() {
+                  _students = students;
+                });
+              }
+            }
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header (Saudação e Avatar)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Olá, Professor 👋',
+                          style: TextStyle(color: Colors.grey.shade400, fontSize: 15),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          userName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF8C52FF),
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Aaa',
+                      child: Center(
+                        child: Text(
+                          userName[0].toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // Cards de Estatísticas
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatCard(
+                        icon: Icons.people_outline_rounded,
+                        iconColor: const Color(0xFF8C52FF),
+                        value: _students.length.toString(),
+                        label: 'Alunos Ativos',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildStatCard(
+                        icon: Icons.fitness_center_rounded,
+                        iconColor: const Color(0xFFE56291),
+                        value: workouts.length.toString(),
+                        label: 'Treinos',
+                        rotateIcon: true,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildStatCard(
+                        icon: Icons.trending_up_rounded,
+                        iconColor: const Color(0xFF65C48C),
+                        value: '+0',
+                        label: 'Esse Mês',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const PrescribeWorkoutScreen(),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF8C52FF),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 0,
+                    minimumSize: const Size(double.infinity, 56),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.add, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Prescrever Novo Treino',
                         style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 28,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
-                  // Avatar do Professor
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF8C52FF),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'A',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              // Cards de Estatísticas
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatCard(
-                      icon: Icons.people_outline_rounded,
-                      iconColor: const Color(0xFF8C52FF),
-                      value: '48',
-                      label: 'Alunos Ativos',
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildStatCard(
-                      icon: Icons.fitness_center_rounded,
-                      iconColor: const Color(0xFFE56291),
-                      value: '3',
-                      label: 'Treinos',
-                      rotateIcon: true,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildStatCard(
-                      icon: Icons.trending_up_rounded,
-                      iconColor: const Color(0xFF65C48C),
-                      value: '+12',
-                      label: 'Esse Mês',
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              // Botão: Prescrever Novo Treino
-              ElevatedButton(
-                onPressed: () {
-                  // Navega para a tela de Prescrever Treino
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const PrescribeWorkoutScreen(),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF8C52FF),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  elevation: 0,
-                  minimumSize: const Size(double.infinity, 56), // Largura total
                 ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                const SizedBox(height: 32),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Icon(Icons.add, size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      'Prescrever Novo Treino',
+                    const Text(
+                      'Treinos Recentes',
                       style: TextStyle(
-                        fontSize: 16,
+                        color: Colors.white,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 32),
-
-              // Seção: Treinos Recentes
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Treinos Recentes',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      // TODO: Navegar para todos os treinos
-                    },
-                    child: const Text(
-                      'Ver todos',
-                      style: TextStyle(
-                        color: Color(0xFF8C52FF),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                    GestureDetector(
+                      onTap: () {},
+                      child: const Text(
+                        'Ver todos',
+                        style: TextStyle(
+                          color: Color(0xFF8C52FF),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Lista de Treinos Recentes
-              _buildWorkoutMiniCard(
-                title: 'Treino A – Peito & Tríceps',
-                level: 'Intermediário',
-                levelColor: const Color(0xFFE5A444), // Laranja
-                category: 'Musculação',
-                categoryColor: const Color(0xFF8C52FF),
-                duration: '60 min',
-                exercisesCount: '3 exercícios',
-              ),
-              const SizedBox(height: 12),
-              _buildWorkoutMiniCard(
-                title: 'Treino B – Costas & Bíceps',
-                level: 'Intermediário',
-                levelColor: const Color(0xFFE5A444),
-                category: 'Musculação',
-                categoryColor: const Color(0xFF8C52FF),
-                duration: '65 min',
-                exercisesCount: '2 exercícios',
-              ),
-              const SizedBox(height: 12),
-              _buildWorkoutMiniCard(
-                title: 'Treino C – Pernas',
-                level: 'Avançado',
-                levelColor: const Color(0xFFE55353), // Vermelho
-                category: 'Musculação',
-                categoryColor: const Color(0xFF8C52FF),
-                duration: '75 min',
-                exercisesCount: '1 exercícios',
-              ),
-              const SizedBox(height: 32),
-
-              // Seção: Alunos Recentes
-              const Text(
-                'Alunos Recentes',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Lista horizontal de alunos
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _buildStudentAvatar('L', 'Lucas', const Color(0xFF5A44E5)),
-                    const SizedBox(width: 16),
-                    _buildStudentAvatar('F', 'Fernanda', const Color(0xFFE544A4)),
-                    const SizedBox(width: 16),
-                    _buildStudentAvatar('R', 'Rafael', const Color(0xFFE57A44)),
-                    const SizedBox(width: 16),
-                    _buildStudentAvatar('C', 'Camila', const Color(0xFFBBE544)),
-                    const SizedBox(width: 16),
-                    _buildStudentAvatar('B', 'Bruno', const Color(0xFF44E56B)),
                   ],
                 ),
-              ),
-              const SizedBox(height: 16),
-            ],
+                const SizedBox(height: 16),
+
+                if (workoutProvider.isLoading)
+                  const Center(child: CircularProgressIndicator())
+                else if (workouts.isEmpty)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 32),
+                      child: Text(
+                        'Nenhum treino prescrito ainda.',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                  )
+                else
+                  ...workouts.take(5).map((workout) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _buildWorkoutMiniCard(
+                          title: workout.title,
+                          level: workout.level,
+                          levelColor: _getLevelColor(workout.level),
+                          category: workout.category,
+                          categoryColor: const Color(0xFF8C52FF),
+                          duration: workout.duration,
+                          exercisesCount: '${workout.exercises.length} exercícios',
+                        ),
+                      )),
+
+                const SizedBox(height: 32),
+
+                const Text(
+                  'Meus Alunos',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                if (_isLoadingStudents)
+                  const Center(child: CircularProgressIndicator())
+                else if (_students.isEmpty)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Text(
+                        'Nenhum aluno vinculado.',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                  )
+                else
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: _students.map((student) {
+                        final name = student['nome'] ?? 'Aluno';
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 16),
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => PrescribeWorkoutScreen(
+                                    studentId: student['id'],
+                                  ),
+                                ),
+                              );
+                            },
+                            child: _buildStudentAvatar(
+                              name[0].toUpperCase(),
+                              name.split(' ')[0],
+                              const Color(0xFF5A44E5),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
         ),
       ),
-      // Barra de navegação inferior do Professor
-      bottomNavigationBar: NavigationBarTheme(
-        data: NavigationBarThemeData(
-          backgroundColor: const Color(0xFF16161A),
-          indicatorColor: const Color(0xFF2E1A4E), // Pílula de seleção roxa escuro
-          labelTextStyle: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.selected)) {
-              return const TextStyle(color: Color(0xFF8C52FF), fontSize: 12, fontWeight: FontWeight.w600);
-            }
-            return TextStyle(color: Colors.grey.shade500, fontSize: 12, fontWeight: FontWeight.w500);
-          }),
-        ),
-        child: NavigationBar(
-          selectedIndex: _selectedIndex,
-          onDestinationSelected: (int index) {
-            if (index == 1) {
-              Navigator.pushReplacement(
-                context,
-                PageRouteBuilder(
-                  pageBuilder: (context, a1, a2) => const PrescribeWorkoutScreen(),
-                  transitionDuration: Duration.zero,
-                  reverseTransitionDuration: Duration.zero,
-                ),
-              );
-            } else if (index == 2) {
-              // Navega para Configurações sem animação
-              Navigator.pushReplacement(
-                context,
-                PageRouteBuilder(
-                  pageBuilder: (context, a1, a2) => const SettingsScreen(),
-                  transitionDuration: Duration.zero,
-                  reverseTransitionDuration: Duration.zero,
-                ),
-              );
-            } else {
-              setState(() {
-                _selectedIndex = index;
-              });
-            }
-          },
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined, color: Colors.grey),
-              selectedIcon: Icon(Icons.home_rounded, color: Color(0xFF8C52FF)),
-              label: 'Início',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.add_rounded, color: Colors.grey),
-              selectedIcon: Icon(Icons.add_rounded, color: Color(0xFF8C52FF)),
-              label: 'Prescrever',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.settings_outlined, color: Colors.grey),
-              selectedIcon: Icon(Icons.settings_rounded, color: Color(0xFF8C52FF)),
-              label: 'Config',
-            ),
-          ],
-        ),
+      bottomNavigationBar: _buildBottomNav(context),
+    );
+  }
+
+  Color _getLevelColor(String level) {
+    switch (level.toLowerCase()) {
+      case 'iniciante':
+        return const Color(0xFF65C48C);
+      case 'intermediário':
+        return const Color(0xFFE5A444);
+      case 'avançado':
+        return const Color(0xFFE55353);
+      default:
+        return const Color(0xFF8C52FF);
+    }
+  }
+
+  Widget _buildBottomNav(BuildContext context) {
+    return NavigationBarTheme(
+      data: NavigationBarThemeData(
+        backgroundColor: const Color(0xFF16161A),
+        indicatorColor: const Color(0xFF2E1A4E),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const TextStyle(
+                color: Color(0xFF8C52FF), fontSize: 12, fontWeight: FontWeight.w600);
+          }
+          return TextStyle(color: Colors.grey.shade500, fontSize: 12, fontWeight: FontWeight.w500);
+        }),
+      ),
+      child: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (int index) {
+          if (index == 1) {
+            Navigator.pushReplacement(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (context, a1, a2) => const PrescribeWorkoutScreen(),
+                transitionDuration: Duration.zero,
+                reverseTransitionDuration: Duration.zero,
+              ),
+            );
+          } else if (index == 2) {
+            Navigator.pushReplacement(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (context, a1, a2) => const SettingsScreen(),
+                transitionDuration: Duration.zero,
+                reverseTransitionDuration: Duration.zero,
+              ),
+            );
+          } else {
+            setState(() {
+              _selectedIndex = index;
+            });
+          }
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined, color: Colors.grey),
+            selectedIcon: Icon(Icons.home_rounded, color: Color(0xFF8C52FF)),
+            label: 'Início',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.add_rounded, color: Colors.grey),
+            selectedIcon: Icon(Icons.add_rounded, color: Color(0xFF8C52FF)),
+            label: 'Prescrever',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined, color: Colors.grey),
+            selectedIcon: Icon(Icons.settings_rounded, color: Color(0xFF8C52FF)),
+            label: 'Config',
+          ),
+        ],
       ),
     );
   }
 
-  /// Widget auxiliar para criar os cards de estatísticas no topo
   Widget _buildStatCard({
     required IconData icon,
     required Color iconColor,
@@ -342,7 +416,6 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     );
   }
 
-  /// Widget auxiliar para os Treinos Recentes (mini cards horizontais)
   Widget _buildWorkoutMiniCard({
     required String title,
     required String level,
@@ -409,7 +482,6 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     );
   }
 
-  /// Widget auxiliar para gerar as Tags dentro dos cards
   Widget _buildTag(String text, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -428,7 +500,6 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     );
   }
 
-  /// Widget auxiliar para os avatares dos "Alunos Recentes"
   Widget _buildStudentAvatar(String initial, String name, Color bgColor) {
     return Column(
       children: [

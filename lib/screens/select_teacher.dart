@@ -1,47 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:igym/providers/auth_provider.dart';
 import 'package:igym/screens/student_content.dart';
+import 'package:provider/provider.dart';
 
-class SelectTeacherScreen extends StatelessWidget {
+class SelectTeacherScreen extends StatefulWidget {
   const SelectTeacherScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Lista simulando os dados vindos de uma API ou banco de dados
-    final List<Map<String, dynamic>> teachers = [
-      {
-        'name': 'Carlos Silva',
-        'initials': 'CS',
-        'color': const Color(0xFF8C52FF), // Roxo
-        'specialty': 'Musculação & Hipertrofia',
-        'rating': '4.9',
-        'students': '48',
-      },
-      {
-        'name': 'Ana Rodrigues',
-        'initials': 'AR',
-        'color': const Color(0xFFE56291), // Rosa
-        'specialty': 'Funcional & CrossFit',
-        'rating': '4.8',
-        'students': '35',
-      },
-      {
-        'name': 'Pedro Santos',
-        'initials': 'PS',
-        'color': const Color(0xFF65C48C), // Verde
-        'specialty': 'Emagrecimento & Cardio',
-        'rating': '4.7',
-        'students': '62',
-      },
-      {
-        'name': 'Juliana Costa',
-        'initials': 'JC',
-        'color': const Color(0xFFE5A444), // Laranja
-        'specialty': 'Yoga & Flexibilidade',
-        'rating': '5',
-        'students': '29',
-      },
-    ];
+  State<SelectTeacherScreen> createState() => _SelectTeacherScreenState();
+}
 
+class _SelectTeacherScreenState extends State<SelectTeacherScreen> {
+  List<Map<String, dynamic>> _teachers = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTeachers();
+  }
+
+  Future<void> _loadTeachers() async {
+    final teachers = await context.read<AuthProvider>().fetchTeachers();
+    if (mounted) {
+      setState(() {
+        _teachers = teachers;
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0F0E13),
       body: SafeArea(
@@ -51,12 +41,10 @@ class SelectTeacherScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 40),
-
-              // Header
-              Text(
+              const Text(
                 'BEM-VINDO AO IGYM',
                 style: TextStyle(
-                  color: const Color(0xFF8C52FF),
+                  color: Color(0xFF8C52FF),
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 1.2,
@@ -80,12 +68,10 @@ class SelectTeacherScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-
-              // Barra de Busca
               TextField(
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  hintText: 'Buscar professor ou especialidade...',
+                  hintText: 'Buscar professor...',
                   hintStyle: TextStyle(color: Colors.grey.shade600),
                   prefixIcon: Icon(Icons.search, color: Colors.grey.shade500),
                   filled: true,
@@ -106,46 +92,52 @@ class SelectTeacherScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-
-              // Contador de professores disponíveis
-              Text(
-                '${teachers.length} professores disponíveis',
-                style: TextStyle(
-                  color: Colors.grey.shade500,
-                  fontSize: 13,
+              if (_isLoading)
+                const Expanded(child: Center(child: CircularProgressIndicator()))
+              else ...[
+                Text(
+                  '${_teachers.length} professores disponíveis',
+                  style: TextStyle(
+                    color: Colors.grey.shade500,
+                    fontSize: 13,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-
-              // Lista de Professores
-              Expanded(
-                child: ListView.separated(
-                  itemCount: teachers.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final teacher = teachers[index];
-                    return TeacherCard(
-                      name: teacher['name'],
-                      initials: teacher['initials'],
-                      avatarColor: teacher['color'],
-                      specialty: teacher['specialty'],
-                      rating: teacher['rating'],
-                      students: teacher['students'],
-                      onTap: () {
-                        // TODO: Navegar para os detalhes do professor selecionado
-
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const StudentContentScreen(),
-                            ),
-                          );
-
-                      },
-                    );
-                  },
+                const SizedBox(height: 16),
+                Expanded(
+                  child: ListView.separated(
+                    itemCount: _teachers.length,
+                    separatorBuilder: (context, index) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final teacher = _teachers[index];
+                      final name = teacher['nome'] ?? 'Sem nome';
+                      return TeacherCard(
+                        name: name,
+                        initials: name.isNotEmpty ? name[0].toUpperCase() : '?',
+                        avatarColor: const Color(0xFF8C52FF),
+                        specialty: teacher['especialidade'] ?? 'Instrutor',
+                        rating: '5.0',
+                        students: '0',
+                        onTap: () async {
+                          final auth = context.read<AuthProvider>();
+                          final success = await auth.linkStudentToTeacher(teacher['id']);
+                          if (success && mounted) {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const StudentContentScreen(),
+                              ),
+                            );
+                          } else if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Erro ao selecionar professor.')),
+                            );
+                          }
+                        },
+                      );
+                    },
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
@@ -154,7 +146,6 @@ class SelectTeacherScreen extends StatelessWidget {
   }
 }
 
-/// Widget customizado para o Card do Professor
 class TeacherCard extends StatelessWidget {
   final String name;
   final String initials;
@@ -188,7 +179,6 @@ class TeacherCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Avatar (Iniciais)
             Container(
               width: 56,
               height: 56,
@@ -208,8 +198,6 @@ class TeacherCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 16),
-
-            // Informações do Professor
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -231,8 +219,6 @@ class TeacherCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-
-                  // Linha de Avaliação e Alunos
                   Row(
                     children: [
                       const Icon(Icons.star, color: Colors.amber, size: 16),
@@ -260,8 +246,6 @@ class TeacherCard extends StatelessWidget {
                 ],
               ),
             ),
-
-            // Ícone de seta (Chevron)
             Icon(
               Icons.chevron_right_rounded,
               color: Colors.grey.shade600,

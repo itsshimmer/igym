@@ -1,7 +1,12 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:igym/models/workout_model.dart';
+import 'package:igym/providers/auth_provider.dart';
+import 'package:igym/providers/workout_provider.dart';
+import 'package:igym/screens/select_teacher.dart';
 import 'package:igym/screens/settings.dart';
 import 'package:igym/screens/workout_details.dart';
+import 'package:provider/provider.dart';
 
 class StudentContentScreen extends StatefulWidget {
   const StudentContentScreen({super.key});
@@ -11,25 +16,71 @@ class StudentContentScreen extends StatefulWidget {
 }
 
 class _StudentContentScreenState extends State<StudentContentScreen> {
-  // Começamos no índice 1 ("Treinos") para refletir a imagem
   int _selectedIndex = 1;
+  Map<String, dynamic>? _teacherData;
+  bool _isLoadingTeacher = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  void _loadData() {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final auth = context.read<AuthProvider>();
+      if (auth.user != null) {
+        context.read<WorkoutProvider>().fetchWorkoutsForStudent(auth.user!.uid);
+        if (auth.teacherId != null) {
+          final teacher = await auth.fetchUserDataById(auth.teacherId!);
+          if (mounted) {
+            setState(() {
+              _teacherData = teacher;
+              _isLoadingTeacher = false;
+            });
+          }
+        } else {
+          if (mounted) {
+            setState(() => _isLoadingTeacher = false);
+          }
+        }
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final workoutProvider = context.watch<WorkoutProvider>();
+    final userName = auth.userName ?? 'Aluno';
+    final workouts = workoutProvider.studentWorkouts;
+
     return Scaffold(
       backgroundColor: const Color(0xFF0F0E13),
-      // Corpo da tela (renderiza o conteúdo da aba selecionada)
       body: SafeArea(
-        child: _buildTreinosTab(),
+        child: RefreshIndicator(
+          onRefresh: () async {
+            if (auth.user != null) {
+              await workoutProvider.fetchWorkoutsForStudent(auth.user!.uid);
+              if (auth.teacherId != null) {
+                final teacher = await auth.fetchUserDataById(auth.teacherId!);
+                if (mounted) {
+                  setState(() => _teacherData = teacher);
+                }
+              }
+            }
+          },
+          child: _buildTreinosTab(userName, workoutProvider, workouts),
+        ),
       ),
-      // Barra de navegação inferior estilo Material 3
       bottomNavigationBar: NavigationBarTheme(
         data: NavigationBarThemeData(
           backgroundColor: const Color(0xFF16161A),
-          indicatorColor: const Color(0xFF2E1A4E), // Fundo roxo escuro (pílula)
+          indicatorColor: const Color(0xFF2E1A4E),
           labelTextStyle: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) {
-              return const TextStyle(color: Color(0xFF8C52FF), fontSize: 12, fontWeight: FontWeight.w600);
+              return const TextStyle(
+                  color: Color(0xFF8C52FF), fontSize: 12, fontWeight: FontWeight.w600);
             }
             return TextStyle(color: Colors.grey.shade500, fontSize: 12, fontWeight: FontWeight.w500);
           }),
@@ -38,7 +89,6 @@ class _StudentContentScreenState extends State<StudentContentScreen> {
           selectedIndex: _selectedIndex,
           onDestinationSelected: (int index) {
             if (index == 2) {
-              // Navega para Configurações sem animação
               Navigator.pushReplacement(
                 context,
                 PageRouteBuilder(
@@ -81,14 +131,14 @@ class _StudentContentScreenState extends State<StudentContentScreen> {
     );
   }
 
-  /// O conteúdo principal da aba de Treinos
-  Widget _buildTreinosTab() {
+  Widget _buildTreinosTab(
+      String userName, WorkoutProvider workoutProvider, List<WorkoutModel> workouts) {
     return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header (Saudação e Avatar)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -96,7 +146,7 @@ class _StudentContentScreenState extends State<StudentContentScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Olá, Aaa 👋',
+                    'Olá, $userName 👋',
                     style: TextStyle(color: Colors.grey.shade400, fontSize: 15),
                   ),
                   const SizedBox(height: 4),
@@ -110,7 +160,6 @@ class _StudentContentScreenState extends State<StudentContentScreen> {
                   ),
                 ],
               ),
-              // Avatar do Aluno
               Container(
                 width: 48,
                 height: 48,
@@ -118,10 +167,10 @@ class _StudentContentScreenState extends State<StudentContentScreen> {
                   color: const Color(0xFF28282D),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Center(
+                child: Center(
                   child: Text(
-                    'A',
-                    style: TextStyle(
+                    userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -134,78 +183,15 @@ class _StudentContentScreenState extends State<StudentContentScreen> {
           const SizedBox(height: 24),
 
           // Card do Professor Atual
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF18102B), // Leve tom roxo escuro no fundo
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF3A2460)), // Borda roxa
-            ),
-            child: Row(
-              children: [
-                // Avatar do Professor
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE56291), // Rosa
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Center(
-                    child: Text(
-                      'AR',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                // Textos
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Ana Rodrigues',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Funcional & CrossFit',
-                        style: TextStyle(
-                          color: Colors.grey.shade400,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Botão "Trocar"
-                TextButton(
-                  onPressed: () {
-                    // TODO: Ação para voltar e trocar de professor
-                  },
-                  child: const Text(
-                    'Trocar',
-                    style: TextStyle(
-                      color: Color(0xFF8C52FF),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                )
-              ],
-            ),
-          ),
+          if (_isLoadingTeacher)
+            const Center(child: CircularProgressIndicator())
+          else if (_teacherData == null)
+            _buildNoTeacherCard()
+          else
+            _buildTeacherCard(_teacherData!),
+
           const SizedBox(height: 24),
 
-          // Barra de Busca
           TextField(
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
@@ -232,7 +218,6 @@ class _StudentContentScreenState extends State<StudentContentScreen> {
           ),
           const SizedBox(height: 20),
 
-          // Chips de Filtro
           Row(
             children: [
               _buildFilterChip('Todos', isSelected: true),
@@ -242,14 +227,133 @@ class _StudentContentScreenState extends State<StudentContentScreen> {
           ),
           const SizedBox(height: 24),
 
-          // Lista de Treinos (neste caso, o Card de Exemplo)
-          _buildWorkoutCard(context),
+          if (workoutProvider.isLoading)
+            const Center(child: CircularProgressIndicator())
+          else if (workouts.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 32),
+                child: Text(
+                  'Nenhum treino encontrado.',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ),
+            )
+          else
+            ...workouts.map((workout) => Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: _buildWorkoutCard(context, workout),
+                )),
         ],
       ),
     );
   }
 
-  /// Widget auxiliar para criar os Chips de Filtro ("Todos", "Funcional")
+  Widget _buildNoTeacherCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF16161A),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE55353).withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: Color(0xFFE55353)),
+          const SizedBox(width: 16),
+          const Expanded(
+            child: Text(
+              'Você ainda não selecionou um professor.',
+              style: TextStyle(color: Colors.white, fontSize: 14),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SelectTeacherScreen()),
+              );
+            },
+            child: const Text('Selecionar', style: TextStyle(color: Color(0xFF8C52FF))),
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTeacherCard(Map<String, dynamic> teacher) {
+    final name = teacher['nome'] ?? 'Professor';
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF18102B),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF3A2460)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE56291),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Center(
+              child: Text(
+                name[0].toUpperCase(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  teacher['especialidade'] ?? 'Instrutor',
+                  style: TextStyle(
+                    color: Colors.grey.shade400,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SelectTeacherScreen()),
+              );
+            },
+            child: const Text(
+              'Trocar',
+              style: TextStyle(
+                color: Color(0xFF8C52FF),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
   Widget _buildFilterChip(String label, {required bool isSelected}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -268,16 +372,13 @@ class _StudentContentScreenState extends State<StudentContentScreen> {
     );
   }
 
-  /// Widget do Card de Treino
-  /// Widget do Card de Treino
-  Widget _buildWorkoutCard(BuildContext context) { // <-- Adicionei o context aqui
+  Widget _buildWorkoutCard(BuildContext context, WorkoutModel workout) {
     return GestureDetector(
       onTap: () {
-        // Navega para a tela de detalhes do treino
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => const WorkoutDetailsScreen(),
+            builder: (context) => WorkoutDetailsScreen(workout: workout),
           ),
         );
       },
@@ -291,17 +392,14 @@ class _StudentContentScreenState extends State<StudentContentScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Tags
             Row(
               children: [
-                _buildTag('Iniciante', const Color(0xFF65C48C)),
+                _buildTag(workout.level, _getLevelColor(workout.level)),
                 const SizedBox(width: 8),
-                _buildTag('Funcional', const Color(0xFF8C52FF)),
+                _buildTag(workout.category, const Color(0xFF8C52FF)),
               ],
             ),
             const SizedBox(height: 16),
-
-            // Título e Botão de Ação
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -309,9 +407,9 @@ class _StudentContentScreenState extends State<StudentContentScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'HIIT Funcional – Full Body',
-                        style: TextStyle(
+                      Text(
+                        workout.title,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -319,28 +417,29 @@ class _StudentContentScreenState extends State<StudentContentScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Treino de alta intensidade com intervalos para queima de gordura e condicionamento físico.',
+                        workout.description,
                         style: TextStyle(
                           color: Colors.grey.shade400,
                           fontSize: 13,
                           height: 1.4,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 16),
-                // Botão com Seta Roxa
                 Container(
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2E1A4E), // Roxo escuro
+                    color: const Color(0xFF2E1A4E),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
                     Icons.chevron_right_rounded,
-                    color: Color(0xFF8C52FF), // Roxo claro
+                    color: Color(0xFF8C52FF),
                     size: 24,
                   ),
                 ),
@@ -349,27 +448,20 @@ class _StudentContentScreenState extends State<StudentContentScreen> {
             const SizedBox(height: 20),
             Divider(color: Colors.grey.shade800, height: 1),
             const SizedBox(height: 16),
-
-            // Rodapé do Card (Duração, Exercícios, Data)
             Row(
               children: [
                 Icon(Icons.access_time_rounded, color: Colors.grey.shade500, size: 16),
                 const SizedBox(width: 6),
                 Text(
-                  '45 min',
+                  workout.duration,
                   style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
                 ),
                 const SizedBox(width: 20),
                 Icon(Icons.bar_chart_rounded, color: Colors.grey.shade500, size: 16),
                 const SizedBox(width: 6),
                 Text(
-                  '1 exercícios',
+                  '${workout.exercises.length} exercícios',
                   style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-                ),
-                const Spacer(),
-                Text(
-                  '2026-02-27',
-                  style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
                 ),
               ],
             ),
@@ -379,7 +471,19 @@ class _StudentContentScreenState extends State<StudentContentScreen> {
     );
   }
 
-  /// Widget auxiliar para gerar as Tags (Iniciante, Funcional) com fundo transparente
+  Color _getLevelColor(String level) {
+    switch (level.toLowerCase()) {
+      case 'iniciante':
+        return const Color(0xFF65C48C);
+      case 'intermediário':
+        return const Color(0xFFE5A444);
+      case 'avançado':
+        return const Color(0xFFE55353);
+      default:
+        return const Color(0xFF8C52FF);
+    }
+  }
+
   Widget _buildTag(String text, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

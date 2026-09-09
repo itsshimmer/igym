@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:igym/models/workout_model.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class WorkoutDetailsScreen extends StatelessWidget {
-  const WorkoutDetailsScreen({super.key});
+  final WorkoutModel workout;
+
+  const WorkoutDetailsScreen({super.key, required this.workout});
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +23,7 @@ class WorkoutDetailsScreen extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1E1433), // Fundo roxo escuro
+                    color: const Color(0xFF1E1433),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -44,17 +48,17 @@ class WorkoutDetailsScreen extends StatelessWidget {
               // Tags
               Row(
                 children: [
-                  _buildTag('Iniciante', const Color(0xFF65C48C)),
+                  _buildTag(workout.level, _getLevelColor(workout.level)),
                   const SizedBox(width: 8),
-                  _buildTag('Funcional', const Color(0xFF8C52FF)),
+                  _buildTag(workout.category, const Color(0xFF8C52FF)),
                 ],
               ),
               const SizedBox(height: 16),
 
               // Título e Descrição
-              const Text(
-                'HIIT Funcional – Full Body',
-                style: TextStyle(
+              Text(
+                workout.title,
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -62,7 +66,7 @@ class WorkoutDetailsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'Treino de alta intensidade com intervalos para queima de gordura e condicionamento físico.',
+                workout.description,
                 style: TextStyle(
                   color: Colors.grey.shade400,
                   fontSize: 14,
@@ -77,24 +81,15 @@ class WorkoutDetailsScreen extends StatelessWidget {
                   Icon(Icons.access_time_rounded, color: Colors.grey.shade500, size: 16),
                   const SizedBox(width: 6),
                   Text(
-                    '45 min',
+                    workout.duration,
                     style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
                   ),
                   const SizedBox(width: 20),
                   Icon(Icons.bar_chart_rounded, color: Colors.grey.shade500, size: 16),
                   const SizedBox(width: 6),
                   Text(
-                    '1 exercícios',
+                    '${workout.exercises.length} exercícios',
                     style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-                  ),
-                  const Spacer(),
-                  const Text(
-                    'Por Ana Rodrigues',
-                    style: TextStyle(
-                      color: Color(0xFF8C52FF),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
                   ),
                 ],
               ),
@@ -111,9 +106,14 @@ class WorkoutDetailsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
 
-              // Card de Exercício Expansível
-              const ExerciseExpandableCard(),
-              const SizedBox(height: 32),
+              // Cards de Exercícios
+              ...workout.exercises.asMap().entries.map((entry) => Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0),
+                    child: ExerciseExpandableCard(
+                      index: entry.key + 1,
+                      exercise: entry.value,
+                    ),
+                  )),
             ],
           ),
         ),
@@ -121,7 +121,19 @@ class WorkoutDetailsScreen extends StatelessWidget {
     );
   }
 
-  /// Widget auxiliar para gerar as Tags
+  Color _getLevelColor(String level) {
+    switch (level.toLowerCase()) {
+      case 'iniciante':
+        return const Color(0xFF65C48C);
+      case 'intermediário':
+        return const Color(0xFFE5A444);
+      case 'avançado':
+        return const Color(0xFFE55353);
+      default:
+        return const Color(0xFF8C52FF);
+    }
+  }
+
   Widget _buildTag(String text, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -141,22 +153,27 @@ class WorkoutDetailsScreen extends StatelessWidget {
   }
 }
 
-/// Widget Stateful para o Card do Exercício (gerencia abrir/fechar)
 class ExerciseExpandableCard extends StatefulWidget {
-  const ExerciseExpandableCard({super.key});
+  final int index;
+  final Map<String, dynamic> exercise;
+
+  const ExerciseExpandableCard({super.key, required this.index, required this.exercise});
 
   @override
   State<ExerciseExpandableCard> createState() => _ExerciseExpandableCardState();
 }
 
 class _ExerciseExpandableCardState extends State<ExerciseExpandableCard> {
-  bool _isExpanded = true; // Começa aberto para refletir o design
+  bool _isExpanded = false;
 
   @override
   Widget build(BuildContext context) {
+    final exercise = widget.exercise;
+    final steps = exercise['steps'] as List? ?? [];
+
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF16161A), // Fundo do card
+        color: const Color(0xFF16161A),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: _isExpanded ? const Color(0xFF3A2460) : const Color(0xFF28282D),
@@ -166,7 +183,6 @@ class _ExerciseExpandableCardState extends State<ExerciseExpandableCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header do Card (Sempre visível)
           InkWell(
             onTap: () {
               setState(() {
@@ -178,18 +194,17 @@ class _ExerciseExpandableCardState extends State<ExerciseExpandableCard> {
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
-                  // Número do Exercício
                   Container(
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF2E1A4E), // Fundo roxo escuro
+                      color: const Color(0xFF2E1A4E),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Center(
+                    child: Center(
                       child: Text(
-                        '1',
-                        style: TextStyle(
+                        '${widget.index}',
+                        style: const TextStyle(
                           color: Color(0xFF8C52FF),
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -198,15 +213,13 @@ class _ExerciseExpandableCardState extends State<ExerciseExpandableCard> {
                     ),
                   ),
                   const SizedBox(width: 16),
-
-                  // Informações
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Burpee',
-                          style: TextStyle(
+                        Text(
+                          exercise['name'] ?? 'Sem nome',
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -215,9 +228,9 @@ class _ExerciseExpandableCardState extends State<ExerciseExpandableCard> {
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            const Text(
-                              '4 séries',
-                              style: TextStyle(
+                            Text(
+                              '${exercise['sets'] ?? '-'} séries',
+                              style: const TextStyle(
                                 color: Color(0xFF8C52FF),
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
@@ -227,37 +240,37 @@ class _ExerciseExpandableCardState extends State<ExerciseExpandableCard> {
                               padding: const EdgeInsets.symmetric(horizontal: 6.0),
                               child: Text('×', style: TextStyle(color: Colors.grey.shade500)),
                             ),
-                            const Text(
-                              '10 reps',
-                              style: TextStyle(
+                            Text(
+                              '${exercise['reps'] ?? '-'} reps',
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            // Badge Full Body
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF28282D),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                'Full Body',
-                                style: TextStyle(
-                                  color: Colors.grey.shade400,
-                                  fontSize: 11,
+                            if (exercise['muscleGroup'] != null &&
+                                exercise['muscleGroup'].toString().isNotEmpty) ...[
+                              const SizedBox(width: 12),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF28282D),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  exercise['muscleGroup'],
+                                  style: TextStyle(
+                                    color: Colors.grey.shade400,
+                                    fontSize: 11,
+                                  ),
                                 ),
                               ),
-                            ),
+                            ],
                           ],
                         ),
                       ],
                     ),
                   ),
-
-                  // Ícone de Expandir/Recolher
                   Icon(
                     _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                     color: Colors.grey.shade500,
@@ -266,8 +279,6 @@ class _ExerciseExpandableCardState extends State<ExerciseExpandableCard> {
               ),
             ),
           ),
-
-          // Corpo do Card (Visível apenas se expandido)
           if (_isExpanded)
             Padding(
               padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 20.0),
@@ -275,63 +286,71 @@ class _ExerciseExpandableCardState extends State<ExerciseExpandableCard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 8),
-
-                  // Seção: Descrição
-                  _buildSectionTitle(Icons.edit_note_rounded, 'DESCRIÇÃO', const Color(0xFF8C52FF)),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Exercício completo que trabalha o corpo todo. Ótimo para condicionamento cardiovascular.',
-                    style: TextStyle(color: Colors.white, fontSize: 14, height: 1.4),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Seção: Como Executar
-                  _buildSectionTitle(Icons.format_list_bulleted_rounded, 'COMO EXECUTAR', const Color(0xFF8C52FF)),
-                  const SizedBox(height: 12),
-                  _buildStep(1, 'Fique em pé com pés na largura dos ombros'),
-                  _buildStep(2, 'Abaixe e coloque as mãos no chão'),
-                  _buildStep(3, 'Jogue os pés para trás para posição de prancha'),
-                  _buildStep(4, 'Faça uma flexão (opcional para iniciantes)'),
-                  _buildStep(5, 'Volte os pés para as mãos e salte verticalmente com os braços para cima'),
-                  const SizedBox(height: 20),
-
-                  // Seção: Vídeo de Execução
-                  _buildSectionTitle(Icons.play_circle_outline_rounded, 'VÍDEO DE EXECUÇÃO', const Color(0xFFE55353)), // Cor avermelhada do design
-                  const SizedBox(height: 12),
-
-                  // Placeholder do Vídeo
-                  Container(
-                    width: double.infinity,
-                    height: 160,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E1428), // Fundo levemente avermelhado escuro
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFF332036)),
+                  if (exercise['observations'] != null &&
+                      exercise['observations'].toString().isNotEmpty) ...[
+                    _buildSectionTitle(Icons.edit_note_rounded, 'DESCRIÇÃO', const Color(0xFF8C52FF)),
+                    const SizedBox(height: 8),
+                    Text(
+                      exercise['observations'],
+                      style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.4),
                     ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFFE55353), width: 2),
-                          ),
-                          child: const Icon(Icons.play_arrow_rounded, color: Color(0xFFE55353), size: 32),
+                    const SizedBox(height: 20),
+                  ],
+                  if (steps.isNotEmpty && steps.any((s) => s.toString().isNotEmpty)) ...[
+                    _buildSectionTitle(
+                        Icons.format_list_bulleted_rounded, 'COMO EXECUTAR', const Color(0xFF8C52FF)),
+                    const SizedBox(height: 12),
+                    ...steps.asMap().entries.where((e) => e.value.toString().isNotEmpty).map(
+                        (e) => _buildStep(e.key + 1, e.value)),
+                    const SizedBox(height: 20),
+                  ],
+                  if (exercise['videoUrl'] != null &&
+                      exercise['videoUrl'].toString().isNotEmpty) ...[
+                    _buildSectionTitle(
+                        Icons.play_circle_outline_rounded, 'VÍDEO DE EXECUÇÃO', const Color(0xFFE55353)),
+                    const SizedBox(height: 12),
+                    InkWell(
+                      onTap: () async {
+                        final url = Uri.parse(exercise['videoUrl']);
+                        if (await canLaunchUrl(url)) {
+                          await launchUrl(url);
+                        }
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        height: 160,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E1428),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFF332036)),
                         ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Assistir vídeo no YouTube',
-                          style: TextStyle(
-                            color: Colors.grey.shade400,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: const Color(0xFFE55353), width: 2),
+                              ),
+                              child: const Icon(Icons.play_arrow_rounded,
+                                  color: Color(0xFFE55353), size: 32),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Assistir vídeo no YouTube',
+                              style: TextStyle(
+                                color: Colors.grey.shade400,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -340,7 +359,6 @@ class _ExerciseExpandableCardState extends State<ExerciseExpandableCard> {
     );
   }
 
-  /// Título de cada sub-seção (ex: DESCRIÇÃO, COMO EXECUTAR)
   Widget _buildSectionTitle(IconData icon, String title, Color color) {
     return Row(
       children: [
@@ -359,7 +377,6 @@ class _ExerciseExpandableCardState extends State<ExerciseExpandableCard> {
     );
   }
 
-  /// Item da lista de passos
   Widget _buildStep(int stepNumber, String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),

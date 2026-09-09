@@ -1,24 +1,26 @@
 import 'package:flutter/material.dart';
-import 'package:igym/screens/register_professor.dart';
+import 'package:igym/providers/auth_provider.dart';
 import 'package:igym/screens/teacher_dashboard.dart';
 import 'package:provider/provider.dart';
 
-import '../providers/auth_provider.dart';
-
-class LoginProfessorScreen extends StatefulWidget {
-  const LoginProfessorScreen({super.key});
+class RegisterProfessorScreen extends StatefulWidget {
+  const RegisterProfessorScreen({super.key});
 
   @override
-  State<LoginProfessorScreen> createState() => _LoginProfessorScreenState();
+  State<RegisterProfessorScreen> createState() => _RegisterProfessorScreenState();
 }
 
-class _LoginProfessorScreenState extends State<LoginProfessorScreen> {
+class _RegisterProfessorScreenState extends State<RegisterProfessorScreen> {
+  final TextEditingController _nomeController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _especialidadeController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
   @override
   void dispose() {
+    _nomeController.dispose();
     _emailController.dispose();
+    _especialidadeController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -56,28 +58,10 @@ class _LoginProfessorScreenState extends State<LoginProfessorScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 40),
-              Center(
-                child: Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF8C52FF),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.school_outlined,
-                      color: Colors.white,
-                      size: 36,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
               const Center(
                 child: Text(
-                  'Entrar como Professor',
+                  'Cadastro de Professor',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
@@ -88,7 +72,7 @@ class _LoginProfessorScreenState extends State<LoginProfessorScreen> {
               const SizedBox(height: 8),
               Center(
                 child: Text(
-                  'Bem-vindo de volta ao iGym!',
+                  'Crie sua conta para começar a prescrever',
                   style: TextStyle(
                     fontSize: 15,
                     color: Colors.grey.shade400,
@@ -96,40 +80,25 @@ class _LoginProfessorScreenState extends State<LoginProfessorScreen> {
                 ),
               ),
               const SizedBox(height: 32),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF16161A),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF28282D)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF8C52FF),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Acesso de Professor',
-                      style: TextStyle(
-                        color: Colors.grey.shade300,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
+              CustomInputField(
+                label: 'Nome Completo',
+                hintText: 'João Silva',
+                prefixIcon: Icons.person_outline,
+                controller: _nomeController,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               CustomInputField(
                 label: 'E-mail',
                 hintText: 'seu@email.com',
                 prefixIcon: Icons.email_outlined,
                 controller: _emailController,
+              ),
+              const SizedBox(height: 20),
+              CustomInputField(
+                label: 'Especialidade',
+                hintText: 'Ex: Musculação, Yoga, Crossfit',
+                prefixIcon: Icons.workspace_premium_outlined,
+                controller: _especialidadeController,
               ),
               const SizedBox(height: 20),
               CustomInputField(
@@ -139,57 +108,44 @@ class _LoginProfessorScreenState extends State<LoginProfessorScreen> {
                 isPassword: true,
                 controller: _passwordController,
               ),
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerRight,
-                child: Text(
-                  'Esqueceu a senha?',
-                  style: TextStyle(
-                    color: const Color(0xFF8C52FF),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 40),
               ElevatedButton(
                 onPressed: authProvider.isLoading
                     ? null
                     : () async {
+                        final nome = _nomeController.text.trim();
                         final email = _emailController.text.trim();
+                        final especialidade = _especialidadeController.text.trim();
                         final password = _passwordController.text.trim();
 
-                        if (email.isEmpty || password.isEmpty) {
+                        if (nome.isEmpty || email.isEmpty || password.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Preencha todos os campos.')),
+                            const SnackBar(content: Text('Preencha os campos obrigatórios.')),
                           );
                           return;
                         }
 
-                        bool logado = await authProvider.login(email, password);
+                        bool sucesso = await authProvider.register(
+                          email: email,
+                          password: password,
+                          nome: nome,
+                          role: 'professor',
+                          especialidade: especialidade,
+                        );
 
-                        if (logado) {
+                        if (sucesso) {
                           if (mounted) {
-                            if (authProvider.userRole != 'professor') {
-                              await authProvider.logout();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Esta conta não é de professor.')),
-                              );
-                              return;
-                            }
-
-                            Navigator.pushReplacement(
+                            Navigator.pushAndRemoveUntil(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const TeacherDashboardScreen(),
-                              ),
+                                  builder: (context) => const TeacherDashboardScreen()),
+                              (route) => false,
                             );
                           }
                         } else {
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('Erro ao autenticar. Verifique suas credenciais.')),
+                              const SnackBar(content: Text('Erro ao cadastrar. Tente novamente.')),
                             );
                           }
                         }
@@ -201,93 +157,19 @@ class _LoginProfessorScreenState extends State<LoginProfessorScreen> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  elevation: 0,
                 ),
                 child: authProvider.isLoading
                     ? const SizedBox(
                         height: 20,
                         width: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                       )
                     : const Text(
-                        'Entrar',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        'Criar Conta',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
               ),
               const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(child: Divider(color: Colors.grey.shade800)),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      'ou',
-                      style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
-                    ),
-                  ),
-                  Expanded(child: Divider(color: Colors.grey.shade800)),
-                ],
-              ),
-              const SizedBox(height: 24),
-              OutlinedButton(
-                onPressed: () {},
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  side: const BorderSide(color: Color(0xFF28282D)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  backgroundColor: const Color(0xFF16161A),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.g_mobiledata, color: Colors.white, size: 28),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Entrar com Google',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 32),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Não tem conta? ',
-                    style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const RegisterProfessorScreen()),
-                      );
-                    },
-                    child: const Text(
-                      'Cadastre-se',
-                      style: TextStyle(
-                        color: Color(0xFF8C52FF),
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
             ],
           ),
         ),

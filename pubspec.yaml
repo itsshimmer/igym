@@ -39,6 +39,7 @@ dependencies:
   firebase_auth: any
   cloud_firestore: any
   provider: ^6.1.5+1
+  url_launcher: ^6.3.2
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -1,6 +1,13 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'teacher_dashboard.dart';
+import 'package:igym/providers/auth_provider.dart';
+import 'package:igym/screens/prescribe_workout.dart';
+import 'package:igym/screens/role_selector.dart';
+import 'package:igym/screens/student_content.dart';
+import 'package:igym/screens/teacher_dashboard.dart';
+import 'package:provider/provider.dart';
+
+import '../providers/workout_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -10,15 +17,19 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  final int _selectedIndex = 2; // "Config" selecionado
+  final int _selectedIndex = 2;
 
-  // Estados dos Switches
   bool _notificationsEnabled = true;
   bool _darkModeEnabled = true;
   bool _remindersEnabled = false;
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final userName = auth.userName ?? 'Usuário';
+    final userEmail = auth.user?.email ?? 'Sem e-mail';
+    final userRole = auth.userRole ?? 'aluno';
+
     return Scaffold(
       backgroundColor: const Color(0xFF0F0E13),
       body: SafeArea(
@@ -27,7 +38,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
               const Text(
                 'Configurações',
                 style: TextStyle(
@@ -48,7 +58,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 child: Row(
                   children: [
-                    // Avatar
                     Container(
                       width: 56,
                       height: 56,
@@ -56,10 +65,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         color: const Color(0xFF8C52FF),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: const Center(
+                      child: Center(
                         child: Text(
-                          'A',
-                          style: TextStyle(
+                          userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
@@ -68,15 +77,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ),
                     const SizedBox(width: 16),
-
-                    // Informações do Usuário
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Aaa',
-                            style: TextStyle(
+                          Text(
+                            userName,
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -84,28 +91,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'aaa',
+                            userEmail,
                             style: TextStyle(
                               color: Colors.grey.shade400,
                               fontSize: 14,
                             ),
                           ),
                           const SizedBox(height: 8),
-                          // Badge Professor
+                          // Badge Role
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: const Color(0xFF2E1A4E),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text('👩‍🏫', style: TextStyle(fontSize: 12)),
-                                SizedBox(width: 4),
+                                Text(userRole == 'professor' ? '👩‍🏫' : '🏋️',
+                                    style: const TextStyle(fontSize: 12)),
+                                const SizedBox(width: 4),
                                 Text(
-                                  'Professor',
-                                  style: TextStyle(
+                                  userRole.toUpperCase(),
+                                  style: const TextStyle(
                                     color: Color(0xFF8C52FF),
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
@@ -117,15 +125,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                       ),
                     ),
-
-                    // Seta
                     Icon(Icons.chevron_right_rounded, color: Colors.grey.shade500),
                   ],
                 ),
               ),
               const SizedBox(height: 32),
 
-              // Seção: CONTA
               _buildSectionHeader('CONTA'),
               _buildSettingsGroup(
                 children: [
@@ -147,13 +152,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 32),
 
-              // Seção: PREFERÊNCIAS
               _buildSectionHeader('PREFERÊNCIAS'),
               _buildSettingsGroup(
                 children: [
                   _buildSwitchItem(
                     icon: Icons.notifications_none_rounded,
-                    iconColor: const Color(0xFFE5A444), // Laranja/Amarelo
+                    iconColor: const Color(0xFFE5A444),
                     title: 'Notificações',
                     subtitle: 'Novos treinos e lembretes',
                     value: _notificationsEnabled,
@@ -161,7 +165,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   _buildSwitchItem(
                     icon: Icons.dark_mode_outlined,
-                    iconColor: const Color(0xFF5A44E5), // Azul arroxeado
+                    iconColor: const Color(0xFF5A44E5),
                     title: 'Modo Escuro',
                     subtitle: 'Interface dark sempre ativa',
                     value: _darkModeEnabled,
@@ -169,7 +173,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   _buildSwitchItem(
                     icon: Icons.fitness_center_rounded,
-                    iconColor: const Color(0xFFE56291), // Rosa
+                    iconColor: const Color(0xFFE56291),
                     title: 'Lembretes de Treino',
                     subtitle: 'Lembrete diário para treinar',
                     value: _remindersEnabled,
@@ -180,20 +184,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 32),
 
-              // Seção: SUPORTE
               _buildSectionHeader('SUPORTE'),
               _buildSettingsGroup(
                 children: [
                   _buildSettingsItem(
                     icon: Icons.help_outline_rounded,
-                    iconColor: const Color(0xFF4DB6AC), // Verde água
+                    iconColor: const Color(0xFF4DB6AC),
                     title: 'Central de Ajuda',
                     subtitle: 'FAQ e tutoriais',
                     onTap: () {},
                   ),
                   _buildSettingsItem(
                     icon: Icons.star_border_rounded,
-                    iconColor: const Color(0xFFFFD54F), // Amarelo
+                    iconColor: const Color(0xFFFFD54F),
                     title: 'Avaliar o App',
                     subtitle: 'Deixe sua avaliação na loja',
                     onTap: () {},
@@ -211,13 +214,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               // Botão Sair da Conta
               OutlinedButton(
-                onPressed: () {
-                  // TODO: Lógica de logout e voltar para seleção de papel
+                onPressed: () async {
+                  context.read<WorkoutProvider>().clearWorkouts();
+                  await auth.logout();
+                  if (mounted) {
+                    Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (context) => const RoleSelectorScreen()),
+                      (route) => false,
+                    );
+                  }
                 },
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 56),
-                  side: const BorderSide(color: Color(0xFF3A1A22)), // Borda avermelhada escura
-                  backgroundColor: const Color(0xFF1A1115), // Fundo avermelhado muito escuro
+                  side: const BorderSide(color: Color(0xFF3A1A22)),
+                  backgroundColor: const Color(0xFF1A1115),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -240,7 +250,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Footer Credit
               Center(
                 child: Text(
                   'iGym v1.0.0 · Desenvolvido com 💜',
@@ -255,65 +264,92 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
       ),
-      // Barra de navegação inferior
-      bottomNavigationBar: NavigationBarTheme(
-        data: NavigationBarThemeData(
-          backgroundColor: const Color(0xFF16161A),
-          indicatorColor: const Color(0xFF2E1A4E),
-          labelTextStyle: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.selected)) {
-              return const TextStyle(color: Color(0xFF8C52FF), fontSize: 12, fontWeight: FontWeight.w600);
-            }
-            return TextStyle(color: Colors.grey.shade500, fontSize: 12, fontWeight: FontWeight.w500);
-          }),
-        ),
-        child: NavigationBar(
-          selectedIndex: _selectedIndex,
-          onDestinationSelected: (int index) {
-            if (index == 0) {
+      bottomNavigationBar: _buildBottomNav(context, userRole),
+    );
+  }
+
+  Widget _buildBottomNav(BuildContext context, String userRole) {
+    final bool isTeacher = userRole == 'professor';
+
+    return NavigationBarTheme(
+      data: NavigationBarThemeData(
+        backgroundColor: const Color(0xFF16161A),
+        indicatorColor: const Color(0xFF2E1A4E),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const TextStyle(
+                color: Color(0xFF8C52FF), fontSize: 12, fontWeight: FontWeight.w600);
+          }
+          return TextStyle(color: Colors.grey.shade500, fontSize: 12, fontWeight: FontWeight.w500);
+        }),
+      ),
+      child: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (int index) {
+          if (index == 0) {
+            Navigator.pushReplacement(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (context, a1, a2) =>
+                    isTeacher ? const TeacherDashboardScreen() : const StudentContentScreen(),
+                transitionDuration: Duration.zero,
+                reverseTransitionDuration: Duration.zero,
+              ),
+            );
+          } else if (index == 1) {
+            if (isTeacher) {
               Navigator.pushReplacement(
                 context,
                 PageRouteBuilder(
-                  pageBuilder: (context, a1, a2) => const TeacherDashboardScreen(),
+                  pageBuilder: (context, a1, a2) => const PrescribeWorkoutScreen(),
                   transitionDuration: Duration.zero,
                   reverseTransitionDuration: Duration.zero,
                 ),
               );
-            } else if (index == 2) {
-              // Navega para Configurações sem animação
+            } else {
+              // Estudantes podem ter uma aba diferente no índice 1 (como "Treinos")
               Navigator.pushReplacement(
                 context,
                 PageRouteBuilder(
-                  pageBuilder: (context, a1, a2) => const SettingsScreen(),
+                  pageBuilder: (context, a1, a2) => const StudentContentScreen(),
                   transitionDuration: Duration.zero,
                   reverseTransitionDuration: Duration.zero,
                 ),
               );
             }
-          },
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined, color: Colors.grey),
-              selectedIcon: Icon(Icons.home_rounded, color: Color(0xFF8C52FF)),
-              label: 'Início',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.add_rounded, color: Colors.grey),
-              selectedIcon: Icon(Icons.add_rounded, color: Color(0xFF8C52FF)),
-              label: 'Prescrever',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.settings_outlined, color: Colors.grey),
-              selectedIcon: Icon(Icons.settings_rounded, color: Color(0xFF8C52FF)),
-              label: 'Config',
-            ),
-          ],
-        ),
+          }
+        },
+        destinations: [
+          const NavigationDestination(
+            icon: Icon(Icons.home_outlined, color: Colors.grey),
+            selectedIcon: Icon(Icons.home_rounded, color: Color(0xFF8C52FF)),
+            label: 'Início',
+          ),
+          NavigationDestination(
+            icon: isTeacher
+                ? const Icon(Icons.add_rounded, color: Colors.grey)
+                : Transform.rotate(
+                    angle: -pi / 4,
+                    child: const Icon(Icons.fitness_center_rounded, color: Colors.grey),
+                  ),
+            selectedIcon: isTeacher
+                ? const Icon(Icons.add_rounded, color: Color(0xFF8C52FF))
+                : Transform.rotate(
+                    angle: -pi / 4,
+                    child: const Icon(Icons.fitness_center_rounded, color: Color(0xFF8C52FF)),
+                  ),
+            label: isTeacher ? 'Prescrever' : 'Treinos',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.settings_outlined, color: Colors.grey),
+            selectedIcon: Icon(Icons.settings_rounded, color: Color(0xFF8C52FF)),
+            label: 'Config',
+          ),
+        ],
       ),
     );
   }
 
-  /// Helper: Cabeçalho das Seções (ex: CONTA, PREFERÊNCIAS)
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0, left: 4.0),
@@ -329,14 +365,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  /// Helper: Agrupa os itens em um container com bordas e divisórias
   Widget _buildSettingsGroup({required List<Widget> children}) {
     List<Widget> separatedChildren = [];
     for (int i = 0; i < children.length; i++) {
       separatedChildren.add(children[i]);
       if (i < children.length - 1) {
         separatedChildren.add(
-          Divider(color: Colors.grey.shade800, height: 1, indent: 56), // Recuo para alinhar com o texto
+          Divider(color: Colors.grey.shade800, height: 1, indent: 56),
         );
       }
     }
@@ -353,7 +388,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  /// Helper: Item de configuração padrão (com Seta de navegação)
   Widget _buildSettingsItem({
     required IconData icon,
     required Color iconColor,
@@ -400,7 +434,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  /// Helper: Item de configuração com Switch (Liga/Desliga)
   Widget _buildSwitchItem({
     required IconData icon,
     required Color iconColor,
