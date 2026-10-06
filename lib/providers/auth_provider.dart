@@ -170,4 +170,33 @@ class AuthProvider extends ChangeNotifier {
     }
     return null;
   }
+
+  /// Atualiza o perfil do usuário atual
+  Future<bool> updateUserProfile({
+    required String nome,
+    String? especialidade,
+  }) async {
+    if (_user == null) return false;
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      Map<String, dynamic> updateData = {
+        'nome': nome,
+      };
+      if (especialidade != null) {
+        updateData['especialidade'] = especialidade;
+      }
+
+      await _db.collection('usuarios').doc(_user!.uid).update(updateData);
+      await _fetchUserData(_user!.uid);
+      return true;
+    } catch (e) {
+      debugPrint("Erro ao atualizar perfil: $e");
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 }

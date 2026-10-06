@@ -1,13 +1,16 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:igym/providers/auth_provider.dart';
+import 'package:igym/providers/workout_provider.dart';
+import 'package:igym/screens/about_screen.dart';
+import 'package:igym/screens/help_center_screen.dart';
 import 'package:igym/screens/prescribe_workout.dart';
+import 'package:igym/screens/privacy_screen.dart';
+import 'package:igym/screens/profile_screen.dart';
 import 'package:igym/screens/role_selector.dart';
 import 'package:igym/screens/student_content.dart';
 import 'package:igym/screens/teacher_dashboard.dart';
 import 'package:provider/provider.dart';
-//test
-import '../providers/workout_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -22,6 +25,110 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
   bool _darkModeEnabled = true;
   bool _remindersEnabled = false;
+
+  void _showRatingDialog(BuildContext context) {
+    int selectedStars = 5;
+    final commentController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF16161A),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text(
+            'Avaliar o iGym',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
+            textAlign: TextAlign.center,
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Gostando da sua experiência no app? Conte-nos o que achou!',
+                style: TextStyle(color: Colors.grey, fontSize: 13),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (index) {
+                  final starIndex = index + 1;
+                  return IconButton(
+                    icon: Icon(
+                      starIndex <= selectedStars ? Icons.star_rounded : Icons.star_outline_rounded,
+                      color: const Color(0xFFFFD54F),
+                      size: 32,
+                    ),
+                    onPressed: () {
+                      setDialogState(() {
+                        selectedStars = starIndex;
+                      });
+                    },
+                  );
+                }),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: commentController,
+                maxLines: 3,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Deixe um comentário (opcional)',
+                  hintStyle: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                  filled: true,
+                  fillColor: const Color(0xFF0F0E13),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF28282D)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF8C52FF)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancelar', style: TextStyle(color: Colors.grey.shade400)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF8C52FF),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Muito obrigado por avaliar o iGym! 💜'),
+                    backgroundColor: Color(0xFF8C52FF),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
+              child: const Text('Enviar Avaliação', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showNotificationSnackBar(String message) {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 2),
+        backgroundColor: const Color(0xFF8C52FF),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,84 +156,93 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: 24),
 
               // Card do Perfil
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF16161A),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFF28282D)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF8C52FF),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Center(
-                        child: Text(
-                          userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
+              InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                  );
+                },
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF16161A),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF28282D)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF8C52FF),
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            userName,
+                        child: Center(
+                          child: Text(
+                            userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 18,
+                              fontSize: 24,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            userEmail,
-                            style: TextStyle(
-                              color: Colors.grey.shade400,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          // Badge Role
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF2E1A4E),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(userRole == 'professor' ? '👩‍🏫' : '🏋️',
-                                    style: const TextStyle(fontSize: 12)),
-                                const SizedBox(width: 4),
-                                Text(
-                                  userRole.toUpperCase(),
-                                  style: const TextStyle(
-                                    color: Color(0xFF8C52FF),
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                    Icon(Icons.chevron_right_rounded, color: Colors.grey.shade500),
-                  ],
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              userName,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              userEmail,
+                              style: TextStyle(
+                                color: Colors.grey.shade400,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            // Badge Role
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2E1A4E),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(userRole == 'professor' ? '👩‍🏫' : '🏋️',
+                                      style: const TextStyle(fontSize: 12)),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    userRole.toUpperCase(),
+                                    style: const TextStyle(
+                                      color: Color(0xFF8C52FF),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.chevron_right_rounded, color: Colors.grey.shade500),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 32),
@@ -139,14 +255,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     iconColor: const Color(0xFF8C52FF),
                     title: 'Perfil',
                     subtitle: 'Editar informações pessoais',
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                      );
+                    },
                   ),
                   _buildSettingsItem(
                     icon: Icons.shield_outlined,
                     iconColor: const Color(0xFF65C48C),
                     title: 'Privacidade',
                     subtitle: 'Controle seus dados',
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const PrivacyScreen()),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -161,7 +287,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: 'Notificações',
                     subtitle: 'Novos treinos e lembretes',
                     value: _notificationsEnabled,
-                    onChanged: (val) => setState(() => _notificationsEnabled = val),
+                    onChanged: (val) {
+                      setState(() => _notificationsEnabled = val);
+                      _showNotificationSnackBar(
+                        val ? 'Notificações ativadas' : 'Notificações desativadas',
+                      );
+                    },
                   ),
                   _buildSwitchItem(
                     icon: Icons.dark_mode_outlined,
@@ -169,7 +300,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: 'Modo Escuro',
                     subtitle: 'Interface dark sempre ativa',
                     value: _darkModeEnabled,
-                    onChanged: (val) => setState(() => _darkModeEnabled = val),
+                    onChanged: (val) {
+                      setState(() => _darkModeEnabled = val);
+                      _showNotificationSnackBar(
+                        val ? 'Modo Escuro ativado' : 'Modo Claro indisponível no tema atual',
+                      );
+                    },
                   ),
                   _buildSwitchItem(
                     icon: Icons.fitness_center_rounded,
@@ -177,7 +313,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: 'Lembretes de Treino',
                     subtitle: 'Lembrete diário para treinar',
                     value: _remindersEnabled,
-                    onChanged: (val) => setState(() => _remindersEnabled = val),
+                    onChanged: (val) {
+                      setState(() => _remindersEnabled = val);
+                      _showNotificationSnackBar(
+                        val ? 'Lembretes diários ativados' : 'Lembretes diários desativados',
+                      );
+                    },
                     rotateIcon: true,
                   ),
                 ],
@@ -192,21 +333,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     iconColor: const Color(0xFF4DB6AC),
                     title: 'Central de Ajuda',
                     subtitle: 'FAQ e tutoriais',
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const HelpCenterScreen()),
+                      );
+                    },
                   ),
                   _buildSettingsItem(
                     icon: Icons.star_border_rounded,
                     iconColor: const Color(0xFFFFD54F),
                     title: 'Avaliar o App',
                     subtitle: 'Deixe sua avaliação na loja',
-                    onTap: () {},
+                    onTap: () => _showRatingDialog(context),
                   ),
                   _buildSettingsItem(
                     icon: Icons.info_outline_rounded,
                     iconColor: Colors.grey.shade400,
                     title: 'Sobre o iGym',
                     subtitle: 'Versão 1.0.0',
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AboutScreen()),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -215,10 +366,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               // Botão Sair da Conta
               OutlinedButton(
                 onPressed: () async {
+                  final navigator = Navigator.of(context, rootNavigator: true);
                   context.read<WorkoutProvider>().clearWorkouts();
                   await auth.logout();
                   if (mounted) {
-                    Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+                    navigator.pushAndRemoveUntil(
                       MaterialPageRoute(builder: (context) => const RoleSelectorScreen()),
                       (route) => false,
                     );
