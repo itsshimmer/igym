@@ -218,14 +218,14 @@ class _StudentContentScreenState extends State<StudentContentScreen> {
           ),
           const SizedBox(height: 20),
 
-          Row(
-            children: [
-              _buildFilterChip('Todos', isSelected: true),
-              const SizedBox(width: 12),
-              _buildFilterChip('Funcional', isSelected: false),
-            ],
-          ),
-          const SizedBox(height: 24),
+          // Row(
+          //   children: [
+          //     _buildFilterChip('Todos', isSelected: true),
+          //     const SizedBox(width: 12),
+          //     _buildFilterChip('Funcional', isSelected: false),
+          //   ],
+          // ),
+          // const SizedBox(height: 24),
 
           if (workoutProvider.isLoading)
             const Center(child: CircularProgressIndicator())

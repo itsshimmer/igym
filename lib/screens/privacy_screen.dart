@@ -8,10 +8,6 @@ class PrivacyScreen extends StatefulWidget {
 }
 
 class _PrivacyScreenState extends State<PrivacyScreen> {
-  bool _publicProfile = false;
-  bool _shareProgress = true;
-  bool _usageAnalytics = true;
-
   void _showExportDataDialog() {
     showDialog(
       context: context,
@@ -237,37 +233,6 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildSectionHeader('PRIVACIDADE DE DADOS'),
-              _buildSettingsGroup(
-                children: [
-                  _buildSwitchItem(
-                    icon: Icons.visibility_outlined,
-                    iconColor: const Color(0xFF8C52FF),
-                    title: 'Perfil Público',
-                    subtitle: 'Permitir que outros vejam seu perfil',
-                    value: _publicProfile,
-                    onChanged: (val) => setState(() => _publicProfile = val),
-                  ),
-                  _buildSwitchItem(
-                    icon: Icons.share_outlined,
-                    iconColor: const Color(0xFF65C48C),
-                    title: 'Compartilhar Progresso',
-                    subtitle: 'Permitir que seu professor acompanhe seu histórico',
-                    value: _shareProgress,
-                    onChanged: (val) => setState(() => _shareProgress = val),
-                  ),
-                  _buildSwitchItem(
-                    icon: Icons.analytics_outlined,
-                    iconColor: const Color(0xFFE5A444),
-                    title: 'Análise de Uso',
-                    subtitle: 'Enviar dados anônimos para melhorias',
-                    value: _usageAnalytics,
-                    onChanged: (val) => setState(() => _usageAnalytics = val),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
-
               _buildSectionHeader('GERENCIAMENTO DE DADOS'),
               _buildSettingsGroup(
                 children: [
@@ -391,56 +356,6 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
             Icon(Icons.chevron_right_rounded, color: Colors.grey.shade600),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildSwitchItem({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-      child: Row(
-        children: [
-          Icon(icon, color: iconColor, size: 24),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: Colors.grey.shade400,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeThumbColor: Colors.white,
-            activeTrackColor: const Color(0xFF8C52FF),
-            inactiveThumbColor: Colors.grey.shade400,
-            inactiveTrackColor: const Color(0xFF28282D),
-          ),
-        ],
       ),
     );
   }

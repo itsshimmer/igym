@@ -311,9 +311,22 @@ class _ExerciseExpandableCardState extends State<ExerciseExpandableCard> {
                     const SizedBox(height: 12),
                     InkWell(
                       onTap: () async {
-                        final url = Uri.parse(exercise['videoUrl']);
-                        if (await canLaunchUrl(url)) {
-                          await launchUrl(url);
+                        final rawUrl = exercise['videoUrl']?.toString().trim() ?? '';
+                        if (rawUrl.isEmpty) return;
+
+                        final url = Uri.parse(rawUrl);
+                        try {
+                          bool launched = await launchUrl(
+                            url,
+                            mode: LaunchMode.externalApplication,
+                          );
+                          if (!launched && await canLaunchUrl(url)) {
+                            await launchUrl(url, mode: LaunchMode.platformDefault);
+                          }
+                        } catch (e) {
+                          if (await canLaunchUrl(url)) {
+                            await launchUrl(url);
+                          }
                         }
                       },
                       child: Container(

@@ -22,10 +22,6 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final int _selectedIndex = 2;
 
-  bool _notificationsEnabled = true;
-  bool _darkModeEnabled = true;
-  bool _remindersEnabled = false;
-
   void _showRatingDialog(BuildContext context) {
     int selectedStars = 5;
     final commentController = TextEditingController();
@@ -114,18 +110,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  void _showNotificationSnackBar(String message) {
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: const Duration(seconds: 2),
-        backgroundColor: const Color(0xFF8C52FF),
-        behavior: SnackBarBehavior.floating,
       ),
     );
   }
@@ -273,53 +257,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         MaterialPageRoute(builder: (context) => const PrivacyScreen()),
                       );
                     },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
-
-              _buildSectionHeader('PREFERÊNCIAS'),
-              _buildSettingsGroup(
-                children: [
-                  _buildSwitchItem(
-                    icon: Icons.notifications_none_rounded,
-                    iconColor: const Color(0xFFE5A444),
-                    title: 'Notificações',
-                    subtitle: 'Novos treinos e lembretes',
-                    value: _notificationsEnabled,
-                    onChanged: (val) {
-                      setState(() => _notificationsEnabled = val);
-                      _showNotificationSnackBar(
-                        val ? 'Notificações ativadas' : 'Notificações desativadas',
-                      );
-                    },
-                  ),
-                  _buildSwitchItem(
-                    icon: Icons.dark_mode_outlined,
-                    iconColor: const Color(0xFF5A44E5),
-                    title: 'Modo Escuro',
-                    subtitle: 'Interface dark sempre ativa',
-                    value: _darkModeEnabled,
-                    onChanged: (val) {
-                      setState(() => _darkModeEnabled = val);
-                      _showNotificationSnackBar(
-                        val ? 'Modo Escuro ativado' : 'Modo Claro indisponível no tema atual',
-                      );
-                    },
-                  ),
-                  _buildSwitchItem(
-                    icon: Icons.fitness_center_rounded,
-                    iconColor: const Color(0xFFE56291),
-                    title: 'Lembretes de Treino',
-                    subtitle: 'Lembrete diário para treinar',
-                    value: _remindersEnabled,
-                    onChanged: (val) {
-                      setState(() => _remindersEnabled = val);
-                      _showNotificationSnackBar(
-                        val ? 'Lembretes diários ativados' : 'Lembretes diários desativados',
-                      );
-                    },
-                    rotateIcon: true,
                   ),
                 ],
               ),
@@ -582,62 +519,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Icon(Icons.chevron_right_rounded, color: Colors.grey.shade600),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildSwitchItem({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-    bool rotateIcon = false,
-  }) {
-    Widget iconWidget = Icon(icon, color: iconColor, size: 24);
-    if (rotateIcon) {
-      iconWidget = Transform.rotate(angle: -pi / 4, child: iconWidget);
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-      child: Row(
-        children: [
-          iconWidget,
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: Colors.grey.shade400,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeThumbColor: Colors.white,
-            activeTrackColor: const Color(0xFF8C52FF),
-            inactiveThumbColor: Colors.grey.shade400,
-            inactiveTrackColor: const Color(0xFF28282D),
-          ),
-        ],
       ),
     );
   }
