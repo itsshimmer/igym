@@ -9,8 +9,13 @@ import 'package:provider/provider.dart';
 
 class PrescribeWorkoutScreen extends StatefulWidget {
   final String? studentId;
+  final WorkoutModel? workoutToEdit;
 
-  const PrescribeWorkoutScreen({super.key, this.studentId});
+  const PrescribeWorkoutScreen({
+    super.key,
+    this.studentId,
+    this.workoutToEdit,
+  });
 
   @override
   State<PrescribeWorkoutScreen> createState() => _PrescribeWorkoutScreenState();
@@ -19,18 +24,15 @@ class PrescribeWorkoutScreen extends StatefulWidget {
 class _PrescribeWorkoutScreenState extends State<PrescribeWorkoutScreen> {
   final int _selectedIndex = 1;
 
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
-  String _category = 'Musculação';
-  String _level = 'Intermediário';
-  String _duration = '60 min';
+  late TextEditingController _titleController;
+  late TextEditingController _descriptionController;
+  late String _category;
+  late String _level;
+  late String _duration;
   String? _selectedStudentId;
 
   List<Map<String, dynamic>> _myStudents = [];
-
-  final List<Map<String, dynamic>> _exercises = [
-    _createEmptyExercise(),
-  ];
+  late List<Map<String, dynamic>> _exercises;
 
   static Map<String, dynamic> _createEmptyExercise() {
     return {
@@ -48,7 +50,39 @@ class _PrescribeWorkoutScreenState extends State<PrescribeWorkoutScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedStudentId = widget.studentId;
+    final edit = widget.workoutToEdit;
+    if (edit != null) {
+      _titleController = TextEditingController(text: edit.title);
+      _descriptionController = TextEditingController(text: edit.description);
+      _category = edit.category.isNotEmpty ? edit.category : 'Musculação';
+      _level = edit.level.isNotEmpty ? edit.level : 'Intermediário';
+      _duration = edit.duration.isNotEmpty ? edit.duration : '60 min';
+      _selectedStudentId = edit.studentId ?? widget.studentId;
+
+      _exercises = edit.exercises.map((e) {
+        final Map<String, dynamic> mapCopy = Map<String, dynamic>.from(e);
+        if (mapCopy['steps'] is List) {
+          mapCopy['steps'] = List<String>.from((mapCopy['steps'] as List).map((s) => s.toString()));
+        } else {
+          mapCopy['steps'] = [''];
+        }
+        mapCopy['isExpanded'] = true;
+        return mapCopy;
+      }).toList();
+
+      if (_exercises.isEmpty) {
+        _exercises = [_createEmptyExercise()];
+      }
+    } else {
+      _titleController = TextEditingController();
+      _descriptionController = TextEditingController();
+      _category = 'Musculação';
+      _level = 'Intermediário';
+      _duration = '60 min';
+      _selectedStudentId = widget.studentId;
+      _exercises = [_createEmptyExercise()];
+    }
+
     _loadStudents();
   }
 
@@ -59,7 +93,6 @@ class _PrescribeWorkoutScreenState extends State<PrescribeWorkoutScreen> {
       if (mounted) {
         setState(() {
           _myStudents = students;
-          // Se não veio studentId via construtor e temos alunos, podemos pré-selecionar ou deixar nulo
         });
       }
     }
@@ -86,17 +119,21 @@ class _PrescribeWorkoutScreenState extends State<PrescribeWorkoutScreen> {
 
   void _addStep(int exerciseIndex) {
     setState(() {
-      _exercises[exerciseIndex]['steps'].add('');
+      if (_exercises[exerciseIndex]['steps'] is List) {
+        (_exercises[exerciseIndex]['steps'] as List).add('');
+      } else {
+        _exercises[exerciseIndex]['steps'] = [''];
+      }
     });
   }
 
   void _updateStep(int exerciseIndex, int stepIndex, String value) {
-    _exercises[exerciseIndex]['steps'][stepIndex] = value;
+    (_exercises[exerciseIndex]['steps'] as List)[stepIndex] = value;
   }
 
   bool get _isFormValid {
-    return _titleController.text.isNotEmpty &&
-        _exercises.every((e) => e['name'].toString().isNotEmpty) &&
+    return _titleController.text.trim().isNotEmpty &&
+        _exercises.every((e) => e['name'].toString().trim().isNotEmpty) &&
         _selectedStudentId != null;
   }
 
@@ -107,24 +144,42 @@ class _PrescribeWorkoutScreenState extends State<PrescribeWorkoutScreen> {
     if (authProvider.user == null || _selectedStudentId == null) return;
 
     final workout = WorkoutModel(
-      id: '',
-      title: _titleController.text,
-      description: _descriptionController.text,
+      id: widget.workoutToEdit?.id ?? '',
+      title: _titleController.text.trim(),
+      description: _descriptionController.text.trim(),
       category: _category,
       level: _level,
       duration: _duration,
       exercises: _exercises,
+      studentId: _selectedStudentId,
+      teacherId: authProvider.user!.uid,
     );
 
-    final success = await workoutProvider.prescribeWorkout(
-      authProvider.user!.uid,
-      _selectedStudentId!,
-      workout,
-    );
+    bool success = false;
+    if (widget.workoutToEdit != null) {
+      success = await workoutProvider.updateWorkout(
+        widget.workoutToEdit!.id,
+        authProvider.user!.uid,
+        _selectedStudentId!,
+        workout,
+      );
+    } else {
+      success = await workoutProvider.prescribeWorkout(
+        authProvider.user!.uid,
+        _selectedStudentId!,
+        workout,
+      );
+    }
 
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Treino salvo com sucesso!')),
+        SnackBar(
+          content: Text(widget.workoutToEdit != null
+              ? 'Treino atualizado com sucesso!'
+              : 'Treino salvo com sucesso!'),
+          backgroundColor: const Color(0xFF65C48C),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       Navigator.pushReplacement(
         context,
@@ -132,7 +187,11 @@ class _PrescribeWorkoutScreenState extends State<PrescribeWorkoutScreen> {
       );
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erro ao salvar treino.')),
+        const SnackBar(
+          content: Text('Erro ao salvar treino. Tente novamente.'),
+          backgroundColor: Color(0xFFE55353),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     }
   }
@@ -140,6 +199,7 @@ class _PrescribeWorkoutScreenState extends State<PrescribeWorkoutScreen> {
   @override
   Widget build(BuildContext context) {
     final isLoading = context.watch<WorkoutProvider>().isLoading;
+    final isEditing = widget.workoutToEdit != null;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F0E13),
@@ -152,7 +212,7 @@ class _PrescribeWorkoutScreenState extends State<PrescribeWorkoutScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildHeader(context),
+                    _buildHeader(context, isEditing),
                     const SizedBox(height: 32),
                     _buildStudentSelector(),
                     const SizedBox(height: 24),
@@ -205,9 +265,11 @@ class _PrescribeWorkoutScreenState extends State<PrescribeWorkoutScreen> {
                     : Text(
                         _selectedStudentId == null
                             ? 'Selecione um aluno'
-                            : _titleController.text.isEmpty
+                            : _titleController.text.trim().isEmpty
                                 ? 'Informe o título do treino'
-                                : 'Salvar Treino',
+                                : isEditing
+                                    ? 'Salvar Alterações'
+                                    : 'Salvar Treino',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -237,7 +299,7 @@ class _PrescribeWorkoutScreenState extends State<PrescribeWorkoutScreen> {
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          value: _selectedStudentId,
+          initialValue: _selectedStudentId,
           hint: const Text('Selecione para quem é o treino',
               style: TextStyle(color: Colors.grey, fontSize: 14)),
           dropdownColor: const Color(0xFF1E1433),
@@ -323,15 +385,12 @@ class _PrescribeWorkoutScreenState extends State<PrescribeWorkoutScreen> {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, bool isEditing) {
     return Row(
       children: [
         GestureDetector(
           onTap: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const TeacherDashboardScreen()),
-            );
+            Navigator.pop(context);
           },
           child: Container(
             padding: const EdgeInsets.all(10),
@@ -347,9 +406,9 @@ class _PrescribeWorkoutScreenState extends State<PrescribeWorkoutScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Prescrever Treino',
-                style: TextStyle(
+              Text(
+                isEditing ? 'Editar Treino' : 'Prescrever Treino',
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -357,7 +416,9 @@ class _PrescribeWorkoutScreenState extends State<PrescribeWorkoutScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Crie um treino completo para seus alunos',
+                isEditing
+                    ? 'Atualize os dados e exercícios deste treino'
+                    : 'Crie um treino completo para seus alunos',
                 style: TextStyle(
                   color: Colors.grey.shade400,
                   fontSize: 13,
@@ -445,7 +506,9 @@ class _PrescribeWorkoutScreenState extends State<PrescribeWorkoutScreen> {
         color: const Color(0xFF16161A),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: exercise['name'].isEmpty ? const Color(0xFF28282D) : const Color(0xFF3A2460),
+          color: exercise['name'].toString().isEmpty
+              ? const Color(0xFF28282D)
+              : const Color(0xFF3A2460),
           width: 1.5,
         ),
       ),
@@ -469,7 +532,9 @@ class _PrescribeWorkoutScreenState extends State<PrescribeWorkoutScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      exercise['name'].isEmpty ? 'Sem nome' : exercise['name'],
+                      exercise['name'].toString().isEmpty
+                          ? 'Sem nome'
+                          : exercise['name'].toString(),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,
@@ -596,7 +661,7 @@ class _PrescribeWorkoutScreenState extends State<PrescribeWorkoutScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            ...(exercise['steps'] as List).asMap().entries.map((stepEntry) {
+            ...((exercise['steps'] as List? ?? [''])).asMap().entries.map((stepEntry) {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8.0),
                 child: Row(
@@ -622,7 +687,7 @@ class _PrescribeWorkoutScreenState extends State<PrescribeWorkoutScreen> {
                     Expanded(
                       child: _buildTextField(
                         hint: 'Passo ${stepEntry.key + 1}...',
-                        initialValue: stepEntry.value,
+                        initialValue: stepEntry.value.toString(),
                         onChanged: (val) => _updateStep(index, stepEntry.key, val),
                       ),
                     ),
@@ -783,7 +848,7 @@ class _PrescribeWorkoutScreenState extends State<PrescribeWorkoutScreen> {
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          value: value,
+          initialValue: value,
           dropdownColor: const Color(0xFF1E1433),
           icon: Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey.shade400),
           style: const TextStyle(color: Colors.white, fontSize: 14),

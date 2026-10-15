@@ -51,8 +51,7 @@ class WorkoutProvider extends ChangeNotifier {
 
     try {
       debugPrint("Buscando treinos para o aluno: $studentId");
-      
-      // Criando a lista para o whereIn de forma segura
+
       List<String> queryIds = [studentId];
       if (studentId != 'geral') {
         queryIds.add('geral');
@@ -88,13 +87,57 @@ class WorkoutProvider extends ChangeNotifier {
 
       debugPrint("Salvando treino: ${data['title']} para aluno $studentId");
       await _db.collection('treinos').add(data);
-      
-      // Recarregar a lista do professor após salvar
+
       await fetchWorkoutsForTeacher(teacherId);
-      
+
       return true;
     } catch (e) {
       debugPrint("Erro ao salvar treino: $e");
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Atualiza um treino existente no Firestore
+  Future<bool> updateWorkout(String workoutId, String teacherId, String studentId, WorkoutModel workout) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      Map<String, dynamic> data = workout.toMap();
+      data['teacherId'] = teacherId;
+      data['studentId'] = studentId;
+      data['updatedAt'] = FieldValue.serverTimestamp();
+
+      debugPrint("Atualizando treino: $workoutId para aluno $studentId");
+      await _db.collection('treinos').doc(workoutId).update(data);
+
+      await fetchWorkoutsForTeacher(teacherId);
+      return true;
+    } catch (e) {
+      debugPrint("Erro ao atualizar treino: $e");
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Deleta um treino do Firestore
+  Future<bool> deleteWorkout(String workoutId, String teacherId) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      debugPrint("Deletando treino: $workoutId");
+      await _db.collection('treinos').doc(workoutId).delete();
+
+      await fetchWorkoutsForTeacher(teacherId);
+      return true;
+    } catch (e) {
+      debugPrint("Erro ao deletar treino: $e");
       return false;
     } finally {
       _isLoading = false;

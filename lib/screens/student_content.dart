@@ -20,6 +20,10 @@ class _StudentContentScreenState extends State<StudentContentScreen> {
   Map<String, dynamic>? _teacherData;
   bool _isLoadingTeacher = true;
 
+  String _searchQuery = '';
+  String _selectedCategory = 'Todos';
+  final List<String> _categories = ['Todos', 'Musculação', 'Funcional', 'Cardio'];
+
   @override
   void initState() {
     super.initState();
@@ -133,6 +137,14 @@ class _StudentContentScreenState extends State<StudentContentScreen> {
 
   Widget _buildTreinosTab(
       String userName, WorkoutProvider workoutProvider, List<WorkoutModel> workouts) {
+    final filteredWorkouts = workouts.where((workout) {
+      final matchesSearch = workout.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          workout.description.toLowerCase().contains(_searchQuery.toLowerCase());
+      final matchesCategory = _selectedCategory == 'Todos' ||
+          workout.category.toLowerCase() == _selectedCategory.toLowerCase();
+      return matchesSearch && matchesCategory;
+    }).toList();
+
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
@@ -184,7 +196,7 @@ class _StudentContentScreenState extends State<StudentContentScreen> {
 
           // Card do Professor Atual
           if (_isLoadingTeacher)
-            const Center(child: CircularProgressIndicator())
+            const Center(child: CircularProgressIndicator(color: Color(0xFF8C52FF)))
           else if (_teacherData == null)
             _buildNoTeacherCard()
           else
@@ -192,13 +204,28 @@ class _StudentContentScreenState extends State<StudentContentScreen> {
 
           const SizedBox(height: 24),
 
+          // Campo de busca de treinos
           TextField(
             style: const TextStyle(color: Colors.white),
+            onChanged: (val) {
+              setState(() {
+                _searchQuery = val;
+              });
+            },
             decoration: InputDecoration(
               hintText: 'Buscar treino...',
               hintStyle: TextStyle(color: Colors.grey.shade600),
               prefixIcon: Icon(Icons.search, color: Colors.grey.shade500),
-              suffixIcon: Icon(Icons.filter_alt_outlined, color: Colors.grey.shade500),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: Icon(Icons.clear_rounded, color: Colors.grey.shade500),
+                      onPressed: () {
+                        setState(() {
+                          _searchQuery = '';
+                        });
+                      },
+                    )
+                  : Icon(Icons.filter_alt_outlined, color: Colors.grey.shade500),
               filled: true,
               fillColor: const Color(0xFF16161A),
               contentPadding: const EdgeInsets.symmetric(vertical: 14),
@@ -218,29 +245,45 @@ class _StudentContentScreenState extends State<StudentContentScreen> {
           ),
           const SizedBox(height: 20),
 
-          // Row(
-          //   children: [
-          //     _buildFilterChip('Todos', isSelected: true),
-          //     const SizedBox(width: 12),
-          //     _buildFilterChip('Funcional', isSelected: false),
-          //   ],
-          // ),
-          // const SizedBox(height: 24),
+          // Chips de filtro de categoria
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: _categories.map((cat) {
+                final isSelected = _selectedCategory == cat;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 12.0),
+                  child: _buildFilterChip(
+                    cat,
+                    isSelected: isSelected,
+                    onTap: () {
+                      setState(() {
+                        _selectedCategory = cat;
+                      });
+                    },
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 24),
 
           if (workoutProvider.isLoading)
-            const Center(child: CircularProgressIndicator())
-          else if (workouts.isEmpty)
-            const Center(
+            const Center(child: CircularProgressIndicator(color: Color(0xFF8C52FF)))
+          else if (filteredWorkouts.isEmpty)
+            Center(
               child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 32),
+                padding: const EdgeInsets.symmetric(vertical: 32),
                 child: Text(
-                  'Nenhum treino encontrado.',
-                  style: TextStyle(color: Colors.grey),
+                  _searchQuery.isNotEmpty || _selectedCategory != 'Todos'
+                      ? 'Nenhum treino encontrado com os filtros selecionados.'
+                      : 'Nenhum treino encontrado.',
+                  style: const TextStyle(color: Colors.grey),
                 ),
               ),
             )
           else
-            ...workouts.map((workout) => Padding(
+            ...filteredWorkouts.map((workout) => Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: _buildWorkoutCard(context, workout),
                 )),
@@ -354,19 +397,22 @@ class _StudentContentScreenState extends State<StudentContentScreen> {
     );
   }
 
-  Widget _buildFilterChip(String label, {required bool isSelected}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      decoration: BoxDecoration(
-        color: isSelected ? const Color(0xFF8C52FF) : const Color(0xFF28282D),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: isSelected ? Colors.white : Colors.grey.shade300,
-          fontWeight: FontWeight.w600,
-          fontSize: 14,
+  Widget _buildFilterChip(String label, {required bool isSelected, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF8C52FF) : const Color(0xFF28282D),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.grey.shade300,
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
         ),
       ),
     );

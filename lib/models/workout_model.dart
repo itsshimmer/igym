@@ -6,6 +6,8 @@ class WorkoutModel {
   final String level;
   final String duration;
   final List<Map<String, dynamic>> exercises;
+  final String? studentId;
+  final String? teacherId;
 
   WorkoutModel({
     required this.id,
@@ -15,6 +17,8 @@ class WorkoutModel {
     required this.level,
     required this.duration,
     required this.exercises,
+    this.studentId,
+    this.teacherId,
   });
 
   /// Converte o documento do Firestore (Map) para o objeto Dart
@@ -27,6 +31,8 @@ class WorkoutModel {
       level: map['level'] ?? '',
       duration: map['duration'] ?? '',
       exercises: List<Map<String, dynamic>>.from(map['exercises'] ?? []),
+      studentId: map['studentId'],
+      teacherId: map['teacherId'],
     );
   }
 
@@ -39,6 +45,8 @@ class WorkoutModel {
       'level': level,
       'duration': duration,
       'exercises': exercises,
+      if (studentId != null) 'studentId': studentId,
+      if (teacherId != null) 'teacherId': teacherId,
     };
   }
 }

@@ -1,9 +1,12 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:igym/models/workout_model.dart';
 import 'package:igym/providers/auth_provider.dart';
 import 'package:igym/providers/workout_provider.dart';
 import 'package:igym/screens/prescribe_workout.dart';
 import 'package:igym/screens/settings.dart';
+import 'package:igym/screens/teacher_workouts.dart';
+import 'package:igym/screens/workout_details.dart';
 import 'package:provider/provider.dart';
 
 class TeacherDashboardScreen extends StatefulWidget {
@@ -38,6 +41,61 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
         }
       }
     });
+  }
+
+  void _confirmDeleteWorkout(BuildContext context, WorkoutModel workout) {
+    final messenger = ScaffoldMessenger.of(context);
+    final auth = context.read<AuthProvider>();
+    final workoutProvider = context.read<WorkoutProvider>();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xFF16161A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Color(0xFFE55353)),
+            SizedBox(width: 10),
+            Text('Excluir Treino', style: TextStyle(color: Colors.white, fontSize: 18)),
+          ],
+        ),
+        content: Text(
+          'Deseja realmente excluir o treino "${workout.title}"?',
+          style: const TextStyle(color: Colors.grey, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text('Cancelar', style: TextStyle(color: Colors.grey.shade400)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE55353),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () async {
+              final uid = auth.user?.uid;
+              Navigator.pop(dialogContext);
+
+              if (uid != null) {
+                final success = await workoutProvider.deleteWorkout(workout.id, uid);
+                if (success) {
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Treino excluído com sucesso!'),
+                      backgroundColor: Color(0xFFE55353),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Excluir', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -99,7 +157,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                       ),
                       child: Center(
                         child: Text(
-                          userName[0].toUpperCase(),
+                          userName.isNotEmpty ? userName[0].toUpperCase() : 'P',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 20,
@@ -194,7 +252,14 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const TeacherWorkoutsScreen(),
+                          ),
+                        );
+                      },
                       child: const Text(
                         'Ver todos',
                         style: TextStyle(
@@ -209,7 +274,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 const SizedBox(height: 16),
 
                 if (workoutProvider.isLoading)
-                  const Center(child: CircularProgressIndicator())
+                  const Center(child: CircularProgressIndicator(color: Color(0xFF8C52FF)))
                 else if (workouts.isEmpty)
                   const Center(
                     child: Padding(
@@ -223,15 +288,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 else
                   ...workouts.take(5).map((workout) => Padding(
                         padding: const EdgeInsets.only(bottom: 12),
-                        child: _buildWorkoutMiniCard(
-                          title: workout.title,
-                          level: workout.level,
-                          levelColor: _getLevelColor(workout.level),
-                          category: workout.category,
-                          categoryColor: const Color(0xFF8C52FF),
-                          duration: workout.duration,
-                          exercisesCount: '${workout.exercises.length} exercícios',
-                        ),
+                        child: _buildWorkoutMiniCard(context, workout),
                       )),
 
                 const SizedBox(height: 32),
@@ -247,7 +304,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 const SizedBox(height: 16),
 
                 if (_isLoadingStudents)
-                  const Center(child: CircularProgressIndicator())
+                  const Center(child: CircularProgressIndicator(color: Color(0xFF8C52FF)))
                 else if (_students.isEmpty)
                   const Center(
                     child: Padding(
@@ -416,68 +473,100 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     );
   }
 
-  Widget _buildWorkoutMiniCard({
-    required String title,
-    required String level,
-    required Color levelColor,
-    required String category,
-    required Color categoryColor,
-    required String duration,
-    required String exercisesCount,
-  }) {
+  Widget _buildWorkoutMiniCard(BuildContext context, WorkoutModel workout) {
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF16161A),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFF28282D)),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    _buildTag(level, levelColor),
-                    const SizedBox(width: 8),
-                    _buildTag(category, categoryColor),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Icon(Icons.access_time_rounded, color: Colors.grey.shade500, size: 14),
-                    const SizedBox(width: 6),
-                    Text(
-                      duration,
-                      style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-                    ),
-                    const SizedBox(width: 16),
-                    Icon(Icons.bar_chart_rounded, color: Colors.grey.shade500, size: 14),
-                    const SizedBox(width: 6),
-                    Text(
-                      exercisesCount,
-                      style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-                    ),
-                  ],
-                ),
-              ],
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => WorkoutDetailsScreen(workout: workout),
             ),
+          );
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        _buildTag(workout.level, _getLevelColor(workout.level)),
+                        const SizedBox(width: 8),
+                        _buildTag(workout.category, const Color(0xFF8C52FF)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      workout.title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Icon(Icons.access_time_rounded, color: Colors.grey.shade500, size: 14),
+                        const SizedBox(width: 6),
+                        Text(
+                          workout.duration,
+                          style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                        ),
+                        const SizedBox(width: 16),
+                        Icon(Icons.bar_chart_rounded, color: Colors.grey.shade500, size: 14),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${workout.exercises.length} exercícios',
+                          style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Botões de Ação Editar / Deletar
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit_rounded, color: Color(0xFF8C52FF), size: 20),
+                    tooltip: 'Editar',
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PrescribeWorkoutScreen(
+                            workoutToEdit: workout,
+                            studentId: workout.studentId,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline_rounded,
+                        color: Color(0xFFE55353), size: 20),
+                    tooltip: 'Excluir',
+                    onPressed: () => _confirmDeleteWorkout(context, workout),
+                  ),
+                ],
+              ),
+            ],
           ),
-          Icon(Icons.chevron_right_rounded, color: Colors.grey.shade600),
-        ],
+        ),
       ),
     );
   }
