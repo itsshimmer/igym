@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:igym/models/workout_model.dart';
 import 'package:igym/providers/auth_provider.dart';
 import 'package:igym/providers/workout_provider.dart';
+import 'package:igym/screens/settings.dart';
 import 'package:igym/screens/teacher_dashboard.dart';
 import 'package:provider/provider.dart';
 
@@ -358,6 +359,15 @@ class _PrescribeWorkoutScreenState extends State<PrescribeWorkoutScreen> {
               context,
               PageRouteBuilder(
                 pageBuilder: (context, animation1, animation2) => const TeacherDashboardScreen(),
+                transitionDuration: Duration.zero,
+                reverseTransitionDuration: Duration.zero,
+              ),
+            );
+          } else if (index == 2) {
+            Navigator.pushReplacement(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (context, animation1, animation2) => const SettingsScreen(),
                 transitionDuration: Duration.zero,
                 reverseTransitionDuration: Duration.zero,
               ),
